@@ -1,12 +1,12 @@
 module.exports = (sequelize, Sequelize) => {
   const Session = sequelize.define("sessions", {
-    session_id: {
+    sessionId: {
       type: Sequelize.INTEGER,
       primaryKey: true,
       autoIncrement: true
     },
     temperature: {
-      type: Sequelize.INTEGER
+      type: Sequelize.FLOAT
     },
     rhythmType: {
       type: Sequelize.SMALLINT  // Zmieniono z TINYINT na SMALLINT
@@ -17,7 +17,7 @@ module.exports = (sequelize, Sequelize) => {
     noiseLevel: {
       type: Sequelize.INTEGER
     },
-    session_code: {
+    sessionCode: {
       type: Sequelize.INTEGER
     }
   });

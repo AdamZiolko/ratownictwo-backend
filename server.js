@@ -2,8 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpecs = require("./app/config/swagger");
+const http = require("http");
 
 const app = express();
+const server = http.createServer(app);
 
 var corsOptions = {
   origin: "http://localhost:8081"
@@ -22,14 +24,17 @@ const db = require("./app/models");
 const Role = db.role;
 
 // Synchronizacja modeli z bazą danych z opcją alter: true, która pozwala na aktualizację struktury tabel
-db.sequelize.sync({ alter: true }).then(() => {
+db.sequelize.sync(
+  { force: false} 
+
+).then(() => {
   console.log('Database synchronized and updated with the latest model changes');
   checkRoles();
 });
 
 // simple route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to bezkoder application." });
+  res.json({ message: "Welcome." });
 });
 
 // Swagger documentation route
@@ -42,9 +47,13 @@ require('./app/routes/session.routes')(app);
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
 });
+
+// Initialize socket.io
+const socketUtils = require('./app/utils/socket');
+socketUtils.init(server);
 
 // Check if roles exist, if not create them
 async function checkRoles() {

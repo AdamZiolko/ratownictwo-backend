@@ -27,7 +27,7 @@ const controller = require("../controllers/session.controller");
  *               - rhythmType
  *               - beatsPerMinute
  *               - noiseLevel
- *               - session_code
+ *               - sessionCode
  *             properties:
  *               temperature:
  *                 type: integer
@@ -41,7 +41,7 @@ const controller = require("../controllers/session.controller");
  *               noiseLevel:
  *                 type: integer
  *                 description: Noise level
- *               session_code:
+ *               sessionCode:
  *                 type: integer
  *                 description: Session code
  *     responses:
@@ -119,7 +119,7 @@ const controller = require("../controllers/session.controller");
  *                 type: integer
  *               noiseLevel:
  *                 type: integer
- *               session_code:
+ *               sessionCode:
  *                 type: integer
  *     responses:
  *       200:
@@ -154,8 +154,62 @@ const controller = require("../controllers/session.controller");
  *         description: Server Error
  */
 
-module.exports = function(app) {
-  app.use(function(req, res, next) {
+/**
+ * @swagger
+ * /api/sessions/code/{code}:
+ *   get:
+ *     summary: Retrieve sessions by session code (for students)
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Session Code
+ *     responses:
+ *       200:
+ *         description: Success
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: No Sessions Found with this code
+ *       500:
+ *         description: Server Error
+ */
+
+/**
+ * @swagger
+ * /api/sessions/validate-code/{code}:
+ *   get:
+ *     summary: Validate if a session code exists
+ *     tags: [Sessions]
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Session Code to validate
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   description: Whether the session code exists
+ *       500:
+ *         description: Server Error
+ */
+
+module.exports = function (app) {
+  app.use(function (req, res, next) {
     res.header(
       "Access-Control-Allow-Headers",
       "x-access-token, Origin, Content-Type, Accept"
@@ -163,45 +217,51 @@ module.exports = function(app) {
     next();
   });
 
-  // Create a new Session
   app.post(
     "/api/sessions",
     [authJwt.verifyToken],
     controller.create
   );
 
-  // Retrieve all Sessions
   app.get(
     "/api/sessions",
     [authJwt.verifyToken],
     controller.findAll
   );
 
-  // Retrieve a single Session with id
+  app.get(
+    "/api/sessions/validate/:code",
+    controller.validateCode
+  );
+
+  app.get(
+    "/api/sessions/code/:code",
+    controller.findByCode
+  );
+
   app.get(
     "/api/sessions/:id",
     [authJwt.verifyToken],
     controller.findOne
   );
 
-  // Update a Session with id
   app.put(
     "/api/sessions/:id",
     [authJwt.verifyToken],
     controller.update
   );
 
-  // Delete a Session with id
   app.delete(
     "/api/sessions/:id",
     [authJwt.verifyToken],
     controller.delete
   );
 
-  // Delete all Sessions
   app.delete(
     "/api/sessions",
     [authJwt.verifyToken, authJwt.isAdmin],
     controller.deleteAll
   );
+
+
 };
