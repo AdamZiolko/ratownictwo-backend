@@ -85,11 +85,10 @@ module.exports = {
     console.log(`Emitting ${event} to room: ${room}`, data);
     // Send the original event
     io.to(room).emit(event, data);
-    
-    // Extract session code from room name
-    const codeMatch = room.match(/^code-(\d+)$/);
+      // Extract session code from room name
+    const codeMatch = room.match(/^code-(.+)$/);
     if (codeMatch && codeMatch[1]) {
-      const sessionCode = parseInt(codeMatch[1]);
+      const sessionCode = codeMatch[1];
       // Also emit in the format the frontend expects (session-update-{code})
       io.to(room).emit(`session-update-${sessionCode}`, data);
     }

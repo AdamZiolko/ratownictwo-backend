@@ -25,7 +25,7 @@ const Role = db.role;
 
 // Synchronizacja modeli z bazą danych z opcją alter: true, która pozwala na aktualizację struktury tabel
 db.sequelize.sync(
-  { force: false} 
+  { force: true} 
 
 ).then(() => {
   console.log('Database synchronized and updated with the latest model changes');

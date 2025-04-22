@@ -28,7 +28,11 @@ const controller = require("../controllers/session.controller");
  *               - beatsPerMinute
  *               - noiseLevel
  *               - sessionCode
+ *               - name
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Session name
  *               temperature:
  *                 type: integer
  *                 description: Temperature value
@@ -42,8 +46,12 @@ const controller = require("../controllers/session.controller");
  *                 type: integer
  *                 description: Noise level
  *               sessionCode:
- *                 type: integer
+ *                 type: string
  *                 description: Session code
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Flag indicating if session is active
  *     responses:
  *       200:
  *         description: Success
@@ -111,6 +119,9 @@ const controller = require("../controllers/session.controller");
  *           schema:
  *             type: object
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Session name
  *               temperature:
  *                 type: integer
  *               rhythmType:
@@ -120,7 +131,10 @@ const controller = require("../controllers/session.controller");
  *               noiseLevel:
  *                 type: integer
  *               sessionCode:
- *                 type: integer
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
+ *                 description: Flag indicating if session is active
  *     responses:
  *       200:
  *         description: Success
@@ -167,7 +181,7 @@ const controller = require("../controllers/session.controller");
  *         name: code
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: Session Code
  *     responses:
  *       200:
@@ -191,7 +205,7 @@ const controller = require("../controllers/session.controller");
  *         name: code
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: Session Code to validate
  *     responses:
  *       200:
