@@ -71,19 +71,16 @@ exports.signin = async (req, res) => {
       });
     }
 
-    // Generate access token
     const token = jwt.sign({ id: user.id },
       config.secret,
       {
         algorithm: 'HS256',
         allowInsecureKeySizes: true,
-        expiresIn: config.jwtExpiration, // Using configured expiration time
+        expiresIn: config.jwtExpiration, 
       });
 
-    // Generate refresh token
     const refreshToken = await createRefreshToken(user.id);
 
-    // Get user roles
     const roles = await user.getRoles();
     var authorities = [];
     for (let i = 0; i < roles.length; i++) {
@@ -111,23 +108,19 @@ exports.refreshToken = async (req, res) => {
   }
 
   try {
-    // Find refresh token in database
     const refreshToken = await RefreshToken.findOne({ where: { token: requestToken } });
 
     if (!refreshToken) {
       return res.status(403).json({ message: "Refresh token not found!" });
     }
 
-    // Verify token is not expired
     if (refreshToken.expiryDate.getTime() < new Date().getTime()) {
-      // Remove expired token from database
       await RefreshToken.destroy({ where: { token: requestToken } });
       return res.status(403).json({
         message: "Refresh token was expired. Please sign in again!",
       });
     }
 
-    // Verify refresh token with secret
     let userId;
     try {
       const decoded = jwt.verify(requestToken, config.refreshTokenSecret);
@@ -136,7 +129,6 @@ exports.refreshToken = async (req, res) => {
       return res.status(403).json({ message: "Invalid refresh token!" });
     }
 
-    // Generate new access token
     const newAccessToken = jwt.sign({ id: userId }, config.secret, {
       expiresIn: config.jwtExpiration,
     });

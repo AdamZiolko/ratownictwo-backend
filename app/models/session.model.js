@@ -12,7 +12,7 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       type: Sequelize.FLOAT
     },
     rhythmType: {
-      type: Sequelize.SMALLINT  // Zmieniono z TINYINT na SMALLINT
+      type: Sequelize.SMALLINT  
     },
     beatsPerMinute: {
       type: Sequelize.INTEGER
@@ -38,25 +38,24 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       defaultValue: Sequelize.NOW,
       comment: "Date when session was last updated"
     },
-    // Added medical parameters
     hr: {
-      type: Sequelize.INTEGER, // Heart rate, e.g. 80
+      type: Sequelize.INTEGER, 
       comment: "Heart rate in beats per minute"
     },
     bp: {
-      type: Sequelize.STRING, // Blood pressure, e.g. "120/80"
+      type: Sequelize.STRING, 
       comment: "Blood pressure in mmHg, format: systolic/diastolic"
     },
     spo2: {
-      type: Sequelize.INTEGER, // Oxygen saturation, e.g. 95%
+      type: Sequelize.INTEGER, 
       comment: "Oxygen saturation percentage"
     },
     etco2: {
-      type: Sequelize.INTEGER, // End-tidal carbon dioxide, e.g. 34
+      type: Sequelize.INTEGER, 
       comment: "End-tidal carbon dioxide level in mmHg"
     },
     rr: {
-      type: Sequelize.INTEGER, // Respiratory rate, e.g. 12
+      type: Sequelize.INTEGER, 
       comment: "Respiratory rate in breaths per minute"
     }
   });
