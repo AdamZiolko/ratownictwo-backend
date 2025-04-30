@@ -21,7 +21,7 @@ const db = require("./app/models");
 const Role = db.role;
 
 db.sequelize.sync(
-  { force: false} 
+  { force: true} 
 
 ).then(() => {
   console.log('Database synchronized and updated with the latest model changes');

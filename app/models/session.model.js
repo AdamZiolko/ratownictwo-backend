@@ -4,6 +4,10 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       primaryKey: true,
       autoIncrement: true
     },
+    userId: {
+      type: Sequelize.INTEGER,
+      comment: "ID of the user who created this session"
+    },
     name: {
       type: Sequelize.STRING,
       comment: "Session name"
@@ -37,10 +41,6 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       type: Sequelize.DATE,
       defaultValue: Sequelize.NOW,
       comment: "Date when session was last updated"
-    },
-    hr: {
-      type: Sequelize.INTEGER, 
-      comment: "Heart rate in beats per minute"
     },
     bp: {
       type: Sequelize.STRING, 

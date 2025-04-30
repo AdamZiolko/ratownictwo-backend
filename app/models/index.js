@@ -26,6 +26,8 @@ db.user = require("../models/user.model.js")(sequelize, Sequelize);
 db.role = require("../models/role.model.js")(sequelize, Sequelize);
 db.refreshToken = require("../models/refreshToken.model.js")(sequelize, Sequelize);
 db.session = require("../models/session.model.js")(sequelize, Sequelize);
+db.student = require("../models/student.model.js")(sequelize, Sequelize);
+db.studentSession = require("../models/studentSession.model.js")(sequelize, Sequelize);
 
 db.role.belongsToMany(db.user, {
   through: "user_roles"
@@ -39,6 +41,25 @@ db.refreshToken.belongsTo(db.user, {
 });
 db.user.hasOne(db.refreshToken, {
   foreignKey: 'userId', targetKey: 'id'
+});
+
+db.session.belongsTo(db.user, {
+  foreignKey: 'userId', targetKey: 'id'
+});
+db.user.hasMany(db.session, {
+  foreignKey: 'userId', targetKey: 'id'
+});
+
+db.student.belongsToMany(db.session, {
+  through: db.studentSession,
+  foreignKey: 'studentId',
+  otherKey: 'sessionId'
+});
+
+db.session.belongsToMany(db.student, {
+  through: db.studentSession,
+  foreignKey: 'sessionId',
+  otherKey: 'studentId'
 });
 
 db.ROLES = ["user", "admin", "moderator"];

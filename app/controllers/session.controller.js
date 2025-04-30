@@ -1,5 +1,7 @@
 const db = require("../models");
 const Session = db.session;
+const Student = db.student;
+const StudentSession = db.studentSession;
 const socketUtils = require("../utils/socket");
 
 exports.create = (req, res) => {
@@ -17,8 +19,8 @@ exports.create = (req, res) => {
       message: "Content cannot be empty!"
     });
     return;
-  }
-  const session = {
+  }  const session = {
+    userId: req.userId,  
     name: req.body.name,
     temperature: req.body.temperature,
     rhythmType: req.body.rhythmType,
@@ -26,7 +28,6 @@ exports.create = (req, res) => {
     noiseLevel: req.body.noiseLevel,
     sessionCode: req.body.sessionCode,
     isActive: req.body.isActive !== undefined ? req.body.isActive : true,
-    hr: req.body.hr,
     bp: req.body.bp,
     spo2: req.body.spo2,
     etco2: req.body.etco2,
@@ -45,7 +46,19 @@ exports.create = (req, res) => {
 };
 
 exports.findAll = (req, res) => {
-  Session.findAll()
+  Session.findAll({
+    where: {
+      userId: req.userId  
+    },
+    include: [{
+      model: Student,
+      through: {
+        attributes: ['active', 'joinedAt'],
+        where: { active: true }
+      },
+      attributes: ['id', 'name', 'surname', 'albumNumber']
+    }]
+  })
     .then(data => {
       res.send(data);
     })
@@ -60,7 +73,20 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
   const id = req.params.id;
 
-  Session.findByPk(id)
+  Session.findOne({
+    where: {
+      sessionId: id,
+      userId: req.userId  
+    },
+    include: [{
+      model: Student,
+      through: {
+        attributes: ['active', 'joinedAt'],
+        where: { active: true }
+      },
+      attributes: ['id', 'name', 'surname', 'albumNumber']
+    }]
+  })
     .then(data => {
       if (data) {
         res.send(data);
@@ -78,8 +104,13 @@ exports.findOne = (req, res) => {
 };
 
 exports.update = (req, res) => {
-  const sessionId = req.params.id; Session.update(req.body, {
-    where: { sessionId: sessionId }
+  const sessionId = req.params.id; 
+  
+  Session.update(req.body, {
+    where: { 
+      sessionId: sessionId,
+      userId: req.userId  
+    }
   })
     .then(num => {
       if (num == 1) {
@@ -106,17 +137,25 @@ exports.update = (req, res) => {
 exports.delete = (req, res) => {
   const id = req.params.id;
 
-  Session.findByPk(id)
+  Session.findOne({
+    where: {
+      sessionId: id,
+      userId: req.userId 
+    }
+  })
     .then(session => {
       if (!session) {
         res.send({
-          message: `Cannot delete Session with id=${id}. Maybe Session was not found!`
+          message: `Cannot delete Session with id=${id}. Maybe Session was not found or you don't have permission!`
         });
         return;
       }
 
       Session.destroy({
-        where: { sessionId: id }
+        where: { 
+          sessionId: id,
+          userId: req.userId 
+        }
       })
         .then(num => {
           if (num == 1) {
@@ -161,26 +200,39 @@ exports.deleteAll = (req, res) => {
 exports.findByCode = (req, res) => {
   const code = req.params.code;
 
-  Session.findAll({
-    where: { sessionCode: code }
+  const whereClause = req.userId ? 
+    { sessionCode: code, userId: req.userId } : 
+    { sessionCode: code };
+
+  Session.findOne({
+    where: whereClause,
+    include: [{
+      model: Student,
+      through: {
+        attributes: ['active', 'joinedAt'],
+        where: { active: true }
+      },
+      attributes: ['id', 'name', 'surname', 'albumNumber']
+    }]
   })
     .then(data => {
-      if (data.length > 0) {
+      if (data) {
         const objectToReturn = {
-          name: data[0].name,
-          temperature: data[0].temperature,
-          rhythmType: data[0].rhythmType,
-          beatsPerMinute: data[0].beatsPerMinute,
-          noiseLevel: data[0].noiseLevel,
-          sessionCode: data[0].sessionCode,
-          isActive: data[0].isActive,
-          createdAt: data[0].createdAt,
-          updatedAt: data[0].updatedAt,
-          hr: data[0].hr,
-          bp: data[0].bp,
-          spo2: data[0].spo2,
-          etco2: data[0].etco2,
-          rr: data[0].rr
+          sessionId: data.sessionId,
+          name: data.name,
+          temperature: data.temperature,
+          rhythmType: data.rhythmType,
+          beatsPerMinute: data.beatsPerMinute,
+          noiseLevel: data.noiseLevel,
+          sessionCode: data.sessionCode,
+          isActive: data.isActive,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+          bp: data.bp,
+          spo2: data.spo2,
+          etco2: data.etco2,
+          rr: data.rr,
+          students: data.students || []
         };
 
         res.send(objectToReturn);
@@ -216,4 +268,142 @@ exports.validateCode = (req, res) => {
         message: `Error validating session code=${code}: ${err.message}`
       });
     });
+};
+
+exports.getSessionStudents = (req, res) => {
+  const sessionId = req.params.sessionId;
+  
+  Session.findOne({
+    where: {
+      sessionId: sessionId,
+      userId: req.userId 
+    }
+  })
+    .then(session => {
+      if (!session) {
+        res.status(404).send({
+          message: `Session with id=${sessionId} not found or you don't have permission.`
+        });
+        return;
+      }
+
+      StudentSession.findAll({
+        where: { 
+          sessionId: sessionId,
+          active: true
+        },
+        include: [{
+          model: Student,
+          attributes: ['id', 'name', 'surname', 'albumNumber']
+        }]
+      })
+      .then(data => {
+        const students = data.map(item => item.Student);
+        res.send(students);
+      })
+      .catch(err => {
+        res.status(500).send({
+          message: `Error retrieving students for session with id=${sessionId}: ${err.message}`
+        });
+      });
+    })
+    .catch(err => {
+      res.status(500).send({
+        message: `Error retrieving session with id=${sessionId}: ${err.message}`
+      });
+    });
+};
+
+// Get all students for a session by session code
+exports.getSessionStudentsByCode = (req, res) => {
+  const code = req.params.code;
+  
+  // Create a where clause - if this is an authenticated user with userId
+  // require that the session belongs to them, otherwise just filter by code
+  const whereClause = req.userId ? 
+    { sessionCode: code, userId: req.userId } : 
+    { sessionCode: code };
+  
+  Session.findOne({
+    where: whereClause
+  })
+    .then(session => {
+      if (!session) {
+        res.status(404).send({
+          message: `Session with code=${code} not found.`
+        });
+        return;
+      }
+
+      session.getStudents({
+        through: {
+          where: { active: true }
+        }
+      })
+      .then(students => {
+        res.send(students);
+      })
+      .catch(err => {
+        res.status(500).send({
+          message: `Error retrieving students for session with code=${code}: ${err.message}`
+        });
+      });
+    })
+    .catch(err => {
+      res.status(500).send({
+        message: `Error finding session with code=${code}: ${err.message}`
+      });
+    });
+};
+
+exports.removeStudentFromSession = (req, res) => {
+  const sessionId = req.params.sessionId;
+  const studentId = req.params.studentId;
+  
+  Session.findOne({
+    where: {
+      sessionId: sessionId,
+      userId: req.userId
+    }
+  })
+  .then(session => {
+    if (!session) {
+      return res.status(403).send({
+        message: "You don't have permission to modify this session."
+      });
+    }
+  }
+  )
+    return StudentSession.update(
+      { active: false },
+      { 
+        where: { 
+          sessionId: sessionId,
+          studentId: studentId 
+        }
+      }
+    )
+  .then(num => {
+    if (num == 1) {
+      Session.findByPk(sessionId)
+        .then(session => {
+          if (session) {
+            socketUtils.emitSessionUpdate('student-left', { studentId }, `code-${session.sessionCode}`);
+          }
+        });
+        
+      res.send({
+        message: "Student was removed from session successfully."
+      });
+    } else {
+      res.send({
+        message: `Cannot remove student with id=${studentId} from session with id=${sessionId}. Maybe relationship was not found!`
+      });
+    }
+  })
+  .catch(err => {
+    res.status(500).send({
+      message: `Error removing student with id=${studentId} from session with id=${sessionId}: ${err.message}`
+    });
+  });
 };
