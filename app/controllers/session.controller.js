@@ -314,12 +314,10 @@ exports.getSessionStudents = (req, res) => {
     });
 };
 
-// Get all students for a session by session code
 exports.getSessionStudentsByCode = (req, res) => {
   const code = req.params.code;
+  const isExaminer = req.query.isExaminer === 'true';
   
-  // Create a where clause - if this is an authenticated user with userId
-  // require that the session belongs to them, otherwise just filter by code
   const whereClause = req.userId ? 
     { sessionCode: code, userId: req.userId } : 
     { sessionCode: code };
@@ -341,7 +339,14 @@ exports.getSessionStudentsByCode = (req, res) => {
         }
       })
       .then(students => {
-        res.send(students);
+        // If the request is from an examiner, include the flag in response
+        const response = isExaminer ? {
+          sessionId: session.sessionId,
+          sessionCode: code,
+          students: students
+        } : students;
+
+        res.send(response);
       })
       .catch(err => {
         res.status(500).send({

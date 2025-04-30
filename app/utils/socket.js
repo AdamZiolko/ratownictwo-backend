@@ -3,185 +3,317 @@ const db = require("../models");
 const Student = db.student;
 const StudentSession = db.studentSession;
 const Session = db.session;
+const User = db.user;
+const Role = db.role;
 
 module.exports = {
-  
   init: (server) => {
-    io = require('socket.io')(server, {
+    io = require("socket.io")(server, {
       cors: {
-       origin: ["http://localhost:8081", "http://localhost:3000"], 
+        origin: ["http://localhost:8081", "http://localhost:3000"],
         methods: ["GET", "POST", "PUT", "DELETE"],
-        credentials: true
-      }
+        credentials: true,
+      },
     });
-      io.on('connection', (socket) => {
-      console.log('A client connected', socket.id);
-        socket.on('join-code', async ({ code, name, surname, albumNumber }) => {
-        console.log(`Client ${socket.id} joined code room: ${code}, Name: ${name || 'N/A'}, Surname: ${surname || 'N/A'}, Album Number: ${albumNumber || 'N/A'}`);
-        
+    io.on("connection", (socket) => {
+      console.log("A client connected", socket.id);
+
+      socket.on(
+        "examiner-subscribe",
+        async ({ sessionCode, userId, token }) => {
+          console.log(
+            `Examiner ${userId} subscribing to session: ${sessionCode}`
+          );
+
+          try {
+            socket.join(`examiner-${sessionCode}`);
+            socket.examinerData = { sessionCode, userId };
+
+            const session = await Session.findOne({
+              where: { sessionCode },
+            });
+
+            if (session) {
+              const students = await session.getStudents({
+                through: { where: { active: true } },
+              });
+
+              socket.emit("student-list-update", {
+                sessionId: session.sessionId,
+                sessionCode,
+                students: students.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  surname: s.surname,
+                  albumNumber: s.albumNumber,
+                })),
+              });
+
+              console.log(
+                `Sent initial student list to examiner for session ${sessionCode}`
+              );
+            }
+          } catch (error) {
+            console.error("Error in examiner subscription:", error);
+            socket.emit("examiner-subscribe-error", {
+              message: "Failed to subscribe to session updates",
+            });
+          }
+        }
+      );
+
+      socket.on("examiner-unsubscribe", () => {
+        if (socket.examinerData && socket.examinerData.sessionCode) {
+          socket.leave(`examiner-${socket.examinerData.sessionCode}`);
+          console.log(
+            `Examiner unsubscribed from session: ${socket.examinerData.sessionCode}`
+          );
+          socket.examinerData = null;
+        }
+      });
+
+      socket.on("join-code", async ({ code, name, surname, albumNumber }) => {
+        console.log(
+          `Client ${socket.id} joined code room: ${code}, Name: ${
+            name || "N/A"
+          }, Surname: ${surname || "N/A"}, Album Number: ${
+            albumNumber || "N/A"
+          }`
+        );
+
         socket.join(`code-${code}`);
-        
+
         socket.userData = { name, surname, albumNumber };
-        
         try {
           const [student, created] = await Student.findOrCreate({
             where: { albumNumber: albumNumber },
-            defaults: { name, surname }
+            defaults: { name, surname },
           });
-          
-          if (!created && (student.name !== name || student.surname !== surname)) {
+
+          if (
+            !created &&
+            (student.name !== name || student.surname !== surname)
+          ) {
             await student.update({ name, surname });
           }
-          
+
           const session = await Session.findOne({
-            where: { sessionCode: code }
+            where: { sessionCode: code },
           });
-          
+
           if (session) {
-            const [studentSession, sessionCreated] = await StudentSession.findOrCreate({
-              where: {
-                studentId: student.id,
-                sessionId: session.sessionId
-              },
-              defaults: {
-                active: true,
-                joinedAt: new Date()
-              }
-            });
-            
+            const [studentSession, sessionCreated] =
+              await StudentSession.findOrCreate({
+                where: {
+                  studentId: student.id,
+                  sessionId: session.sessionId,
+                },
+                defaults: {
+                  active: true,
+                  joinedAt: new Date(),
+                },
+              });
+
             if (!sessionCreated) {
-              await studentSession.update({ 
+              await studentSession.update({
                 active: true,
-                joinedAt: new Date()
+                joinedAt: new Date(),
               });
             }
-            
+
             socket.studentData = {
               studentId: student.id,
-              sessionId: session.sessionId
+              sessionId: session.sessionId,
             };
-            
-            console.log(`Student ${student.id} (${student.name} ${student.surname}) joined session ${session.sessionId}`);
+
+            console.log(
+              `Student ${student.id} (${student.name} ${student.surname}) joined session ${session.sessionId}`
+            );
+
+            const studentInfo = {
+              id: student.id,
+              name: student.name,
+              surname: student.surname,
+              albumNumber: student.albumNumber,
+            };
+
+            // Emit the update to examiners subscribed to this session
+            module.exports.emitExaminerUpdate(
+              session.sessionId,
+              "join",
+              studentInfo
+            );
           } else {
             console.log(`No session found with code: ${code}`);
           }
         } catch (error) {
-          console.error('Error adding student to session:', error);
+          console.error("Error adding student to session:", error);
         }
-        
-        socket.emit('joined-code', { success: true, code, name, surname, albumNumber });
-        
+
+        socket.emit("joined-code", {
+          success: true,
+          code,
+          name,
+          surname,
+          albumNumber,
+        });
+
         if (socket.previousCode && socket.previousCode !== code) {
           socket.leave(`code-${socket.previousCode}`);
-          console.log(`Client ${socket.id} left previous code room: ${socket.previousCode}`);
-          
+          console.log(
+            `Client ${socket.id} left previous code room: ${socket.previousCode}`
+          );
+
           if (socket.previousStudentData) {
             try {
               const { studentId, sessionId } = socket.previousStudentData;
               await StudentSession.update(
                 { active: false },
-                { 
-                  where: { 
+                {
+                  where: {
                     studentId: studentId,
-                    sessionId: sessionId
-                  }
+                    sessionId: sessionId,
+                  },
                 }
               );
-              console.log(`Marked student ${studentId} as inactive in session ${sessionId}`);
+              console.log(
+                `Marked student ${studentId} as inactive in session ${sessionId}`
+              );
             } catch (error) {
-              console.error('Error updating student session status:', error);
+              console.error("Error updating student session status:", error);
             }
           }
         }
-        
+
         socket.previousCode = code;
         socket.previousStudentData = socket.studentData;
       });
-      
-      socket.on('leave-code', async () => {
+      socket.on("leave-code", async () => {
         if (socket.previousCode) {
           socket.leave(`code-${socket.previousCode}`);
-          console.log(`Client ${socket.id} manually left code room: ${socket.previousCode}`);
-          
+
           if (socket.previousStudentData) {
             try {
               const { studentId, sessionId } = socket.previousStudentData;
               await StudentSession.update(
                 { active: false },
-                { 
-                  where: { 
+                {
+                  where: {
                     studentId: studentId,
-                    sessionId: sessionId 
-                  }
+                    sessionId: sessionId,
+                  },
                 }
               );
-              console.log(`Marked student ${studentId} as inactive in session ${sessionId}`);
+
+              const student = await Student.findByPk(studentId);
+              if (student) {
+                const studentInfo = {
+                  id: student.id,
+                  name: student.name,
+                  surname: student.surname,
+                  albumNumber: student.albumNumber,
+                };
+
+                module.exports.emitExaminerUpdate(
+                  sessionId,
+                  "leave",
+                  studentInfo
+                );
+              }
             } catch (error) {
-              console.error('Error updating student session status:', error);
+              console.error("Error updating student session status:", error);
             }
           }
-          
+
           socket.previousCode = null;
           socket.previousStudentData = null;
           socket.studentData = null;
         }
       });
-        socket.on('disconnect', async () => {
-        console.log('A client disconnected', socket.id);
-        
-        const studentDataToUse = socket.studentData || socket.previousStudentData;
-        
+      socket.on("disconnect", async () => {
+        console.log("A client disconnected", socket.id);
+
+        if (socket.examinerData) {
+          socket.leave(`examiner-${socket.examinerData.sessionCode}`);
+          console.log(
+            `Examiner disconnected from session: ${socket.examinerData.sessionCode}`
+          );
+        }
+
+        const studentDataToUse =
+          socket.studentData || socket.previousStudentData;
+
         if (studentDataToUse) {
           try {
             const { studentId, sessionId } = studentDataToUse;
-            
+
             const result = await StudentSession.update(
               { active: false },
-              { 
-                where: { 
+              {
+                where: {
                   studentId: studentId,
-                  sessionId: sessionId 
-                }
+                  sessionId: sessionId,
+                },
               }
             );
-            
+
             if (result[0] > 0) {
               const session = await Session.findByPk(sessionId);
               if (session) {
-                io.to(`code-${session.sessionCode}`).emit('student-left', { 
+                io.to(`code-${session.sessionCode}`).emit("student-left", {
                   studentId: studentId,
-                  sessionId: sessionId
+                  sessionId: sessionId,
                 });
-                console.log(`Marked student ${studentId} as inactive in session ${sessionId} on disconnect and notified room`);
+
+                const student = await Student.findByPk(studentId);
+                if (student) {
+                  const studentInfo = {
+                    id: student.id,
+                    name: student.name,
+                    surname: student.surname,
+                    albumNumber: student.albumNumber,
+                  };
+
+                  module.exports.emitExaminerUpdate(
+                    sessionId,
+                    "leave",
+                    studentInfo
+                  );
+                }
+
+                console.log(
+                  `Marked student ${studentId} as inactive in session ${sessionId} on disconnect and notified all subscribers`
+                );
               }
             }
           } catch (error) {
-            console.error('Error updating student session status on disconnect:', error);
+            console.error(
+              "Error updating student session status on disconnect:",
+              error
+            );
           }
         }
       });
     });
-    
+
     return io;
   },
-  
-  
+
   getIO: () => {
     if (!io) {
-      throw new Error('Socket.io not initialized');
+      throw new Error("Socket.io not initialized");
     }
     return io;
   },
-  
   emitSessionUpdate: (event, data, room) => {
     if (!io) {
-      throw new Error('Socket.io not initialized');
+      throw new Error("Socket.io not initialized");
     }
-    
+
     if (!room) {
-      throw new Error('Room name is required for session updates');
+      throw new Error("Room name is required for session updates");
     }
-    
+
     io.to(room).emit(event, data);
     const codeMatch = room.match(/^code-(.+)$/);
     if (codeMatch && codeMatch[1]) {
@@ -189,14 +321,85 @@ module.exports = {
       io.to(room).emit(`session-update-${sessionCode}`, data);
     }
   },
-  
-  
+
+  emitExaminerUpdate: async (sessionId, eventType, studentData) => {
+    if (!io) {
+      throw new Error("Socket.io not initialized");
+    }
+
+    try {
+      const session = await Session.findByPk(sessionId);
+      if (!session) {
+        console.error(`Cannot find session with id=${sessionId}`);
+        return;
+      }
+
+      const updateData = {
+        type: eventType, 
+        sessionId: sessionId,
+        sessionCode: session.sessionCode,
+        student: studentData,
+        timestamp: new Date(),
+      };
+
+      io.to(`examiner-${session.sessionCode}`).emit(
+        "student-session-update",
+        updateData
+      );
+
+      console.log(
+        `Emitted examiner update for session ${sessionId}, event: ${eventType}`
+      );
+    } catch (error) {
+      console.error("Error emitting examiner update:", error);
+    }
+  },
+
   broadcastSessionUpdate: (event, data) => {
     if (!io) {
-      throw new Error('Socket.io not initialized');
+      throw new Error("Socket.io not initialized");
     }
-    
+
     console.log(`Broadcasting ${event} to all clients`, data);
     io.emit(event, data);
-  }
-}
+  },
+
+  sendStudentListToExaminer: async (sessionId, socketId) => {
+    if (!io) {
+      throw new Error("Socket.io not initialized");
+    }
+
+    try {
+      const session = await Session.findByPk(sessionId);
+      if (!session) {
+        console.error(`Cannot find session with id=${sessionId}`);
+        return;
+      }
+
+      const students = await session.getStudents({
+        through: { where: { active: true } },
+      });
+
+      const studentList = students.map((s) => ({
+        id: s.id,
+        name: s.name,
+        surname: s.surname,
+        albumNumber: s.albumNumber,
+      }));
+
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.emit("student-list-update", {
+          sessionId: session.sessionId,
+          sessionCode: session.sessionCode,
+          students: studentList,
+        });
+        console.log(
+          `Sent updated student list to examiner for session ${session.sessionCode}`
+        );
+      }
+    } catch (error) {
+      console.error("Error sending student list to examiner:", error);
+    }
+  },
+};
