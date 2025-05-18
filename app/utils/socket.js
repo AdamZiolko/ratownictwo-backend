@@ -96,6 +96,10 @@ module.exports = {
           }
         }
       );
+       socket.on("audio-command", ({ code, command, soundName, loop }) => {
+        console.log(`Audio cmd for ${code}:`, { command, soundName, loop });
+        io.to(`code-${code}`).emit("audio-command", { command, soundName, loop });
+      });
 
       socket.on("examiner-unsubscribe", () => {
         if (socket.examinerData && socket.examinerData.sessionCode) {
