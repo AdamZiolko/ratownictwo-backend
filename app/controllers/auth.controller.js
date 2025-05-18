@@ -49,10 +49,22 @@ exports.signup = (req, res) => {
 
 exports.signin = async (req, res) => {
   try {
+    const loginIdentifier = req.body.username || req.body.email;
+    
+    if (!loginIdentifier) {
+      return res.status(400).send({ message: "Username or email is required for login." });
+    }
+
+    let condition = {};
+    
+    if (loginIdentifier.includes('@')) {
+      condition = { email: loginIdentifier };
+    } else {
+      condition = { username: loginIdentifier };
+    }
+
     const user = await User.findOne({
-      where: {
-        username: req.body.username
-      }
+      where: condition
     });
 
     if (!user) {

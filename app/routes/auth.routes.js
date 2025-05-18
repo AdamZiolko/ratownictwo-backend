@@ -60,11 +60,15 @@ const controller = require("../controllers/auth.controller");
  *           schema:
  *             type: object
  *             required:
- *               - username
  *               - password
  *             properties:
  *               username:
  *                 type: string
+ *                 description: Username or email can be used for login
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email or username can be used for login
  *               password:
  *                 type: string
  *                 format: password

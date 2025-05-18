@@ -222,6 +222,34 @@ const controller = require("../controllers/session.controller");
  *         description: Server Error
  */
 
+/**
+ * @swagger
+ * /api/sessions/sync-all:
+ *   post:
+ *     summary: Synchronize all active sessions to remove ghost students
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Sync completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 syncedSessions:
+ *                   type: integer
+ *                 ghostsRemoved:
+ *                   type: integer
+ *       403:
+ *         description: Forbidden (requires admin or examiner role)
+ *       500:
+ *         description: Server error
+ */
+
 module.exports = function (app) {
   app.use(function (req, res, next) {
     res.header(
@@ -275,5 +303,11 @@ module.exports = function (app) {
     "/api/sessions",
     [authJwt.verifyToken, authJwt.isAdmin],
     controller.deleteAll
+  );
+
+  app.post(
+    "/api/sessions/sync-all",
+    [authJwt.verifyToken],
+    controller.syncAllSessions
   );
 };

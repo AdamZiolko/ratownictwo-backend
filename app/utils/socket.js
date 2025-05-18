@@ -15,6 +15,41 @@ module.exports = {
         credentials: true,
       },
     });
+    
+    setInterval(async () => {
+      try {
+        console.log("Running automatic ghost student cleanup...");
+        
+        const activeSessions = await Session.findAll({
+          where: { isActive: true },
+          attributes: ['sessionId', 'sessionCode']
+        });
+        
+        if (activeSessions.length === 0) {
+          console.log("No active sessions found for cleanup");
+          return;
+        }
+        
+        let totalGhostsRemoved = 0;
+        
+        for (const session of activeSessions) {
+          try {
+            const syncResult = await module.exports.syncStudentSessionStatus(session.sessionCode);
+            if (syncResult && syncResult.ghostsRemoved > 0) {
+              totalGhostsRemoved += syncResult.ghostsRemoved;
+              console.log(`Removed ${syncResult.ghostsRemoved} ghost students from session ${session.sessionCode}`);
+            }
+          } catch (err) {
+            console.error(`Error cleaning up session ${session.sessionCode}:`, err);
+          }
+        }
+        
+        console.log(`Automatic cleanup complete. Total ghosts removed: ${totalGhostsRemoved}`);
+      } catch (err) {
+        console.error("Error in automatic ghost student cleanup:", err);
+      }
+    }, 5 * 60 * 1000); 
+    
     io.on("connection", (socket) => {
       console.log("A client connected", socket.id);
 
@@ -400,6 +435,82 @@ module.exports = {
       }
     } catch (error) {
       console.error("Error sending student list to examiner:", error);
+    }
+  },
+
+  getConnectedStudentsForSession: async (sessionCode) => {
+    if (!io) {
+      throw new Error("Socket.io not initialized");
+    }
+
+    try {
+      // Get all sockets in the specific session room
+      const sockets = await io.in(`code-${sessionCode}`).fetchSockets();
+      
+      const connectedStudents = sockets
+        .filter(socket => socket.studentData) // Filter only student sockets (not examiners)
+        .map(socket => socket.studentData.studentId);
+      
+      return connectedStudents;
+    } catch (error) {
+      console.error(`Error getting connected students for session ${sessionCode}:`, error);
+      return [];
+    }
+  },
+  
+  syncStudentSessionStatus: async (sessionCode) => {
+    if (!io) {
+      throw new Error("Socket.io not initialized");
+    }
+
+    try {
+      const session = await Session.findOne({
+        where: { sessionCode }
+      });
+
+      if (!session) {
+        console.error(`Cannot find session with code=${sessionCode}`);
+        return;
+      }
+
+      // Get actually connected student IDs via websockets
+      const connectedStudentIds = await module.exports.getConnectedStudentsForSession(sessionCode);
+      
+      // Get all students marked as active in the database
+      const activeDbStudents = await session.getStudents({
+        through: { where: { active: true } }
+      });
+      
+      // Find ghost students (in DB as active but not connected via socket)
+      const ghostStudentIds = activeDbStudents
+        .filter(student => !connectedStudentIds.includes(student.id))
+        .map(student => student.id);
+      
+      // Update ghost students to inactive
+      if (ghostStudentIds.length > 0) {
+        await StudentSession.update(
+          { active: false },
+          {
+            where: {
+              sessionId: session.sessionId,
+              studentId: ghostStudentIds,
+              active: true
+            }
+          }
+        );
+        
+        console.log(`Marked ${ghostStudentIds.length} ghost students as inactive in session ${sessionCode}`);
+      }
+      
+      return {
+        sessionId: session.sessionId,
+        connectedStudentIds,
+        totalActive: connectedStudentIds.length,
+        ghostsRemoved: ghostStudentIds.length
+      };
+    } catch (error) {
+      console.error(`Error syncing student session status for ${sessionCode}:`, error);
+      return null;
     }
   },
 };
