@@ -96,9 +96,15 @@ module.exports = {
           }
         }
       );
-       socket.on("audio-command", ({ code, command, soundName, loop }) => {
-        console.log(`Audio cmd for ${code}:`, { command, soundName, loop });
-        io.to(`code-${code}`).emit("audio-command", { command, soundName, loop });
+
+      socket.on("audio-command", ({ code, command, soundName, loop }) => {
+      console.log(`Audio cmd for ${code}:`, { command, soundName, loop });
+      io.to(`code-${code}`).emit("audio-command", { command, soundName, loop });
+      });
+
+      socket.on('student-audio-command', ({ studentId, command, soundName, loop }) => {
+      console.log(`🎧 Indywidualna komenda dla studenta ${studentId}:`, { command, soundName, loop });
+      io.to(`student-${studentId}`).emit('audio-command', { command, soundName, loop });
       });
 
       socket.on("examiner-unsubscribe", () => {
@@ -112,6 +118,7 @@ module.exports = {
       });
 
       socket.on("join-code", async ({ code, name, surname, albumNumber }) => {
+
         console.log(
           `Client ${socket.id} joined code room: ${code}, Name: ${
             name || "N/A"
@@ -160,6 +167,9 @@ module.exports = {
               });
             }
 
+            socket.join(`student-${student.id}`); 
+            console.log(`Student ${student.id} dołączył do swojego pokoju`);
+
             socket.studentData = {
               studentId: student.id,
               sessionId: session.sessionId,
@@ -181,6 +191,7 @@ module.exports = {
               session.sessionId,
               "join",
               studentInfo
+              
             );
           } else {
             console.log(`No session found with code: ${code}`);
