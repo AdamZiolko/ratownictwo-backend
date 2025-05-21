@@ -82,6 +82,7 @@ module.exports = {
               socket.emit("student-list-update", {
                 sessionId: session.sessionId,
                 sessionCode,
+                isEkdDisplayHidden: session.isEkdDisplayHidden,
                 students: students.map((s) => ({
                   id: s.id,
                   name: s.name,
@@ -216,6 +217,7 @@ module.exports = {
             name,
             surname,
             albumNumber,
+            isEkdDisplayHidden: session.isEkdDisplayHidden
           });
 
         } catch (error) {
@@ -461,6 +463,7 @@ module.exports = {
         socket.emit("student-list-update", {
           sessionId: session.sessionId,
           sessionCode: session.sessionCode,
+          isEkdDisplayHidden: session.isEkdDisplayHidden,
           students: studentList,
         });
         console.log(

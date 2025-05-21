@@ -52,6 +52,10 @@ const controller = require("../controllers/session.controller");
  *                 type: boolean
  *                 default: true
  *                 description: Flag indicating if session is active
+ *               isEkdDisplayHidden:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Flag indicating if EKD display is hidden
  *     responses:
  *       200:
  *         description: Success
@@ -135,6 +139,9 @@ const controller = require("../controllers/session.controller");
  *               isActive:
  *                 type: boolean
  *                 description: Flag indicating if session is active
+ *               isEkdDisplayHidden:
+ *                 type: boolean
+ *                 description: Flag indicating if EKD display is hidden
  *     responses:
  *       200:
  *         description: Success
@@ -186,6 +193,22 @@ const controller = require("../controllers/session.controller");
  *     responses:
  *       200:
  *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessionId:
+ *                   type: integer
+ *                 name:
+ *                   type: string
+ *                 isActive:
+ *                   type: boolean
+ *                 isEkdDisplayHidden:
+ *                   type: boolean
+ *                   description: Flag indicating if EKD display is hidden
+ *                 sessionCode:
+ *                   type: string
  *       401:
  *         description: Unauthorized
  *       404:

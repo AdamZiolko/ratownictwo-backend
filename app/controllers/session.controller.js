@@ -29,6 +29,7 @@ exports.create = (req, res) => {
     noiseLevel: req.body.noiseLevel,
     sessionCode: req.body.sessionCode,
     isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+    isEkdDisplayHidden: req.body.isEkdDisplayHidden !== undefined ? req.body.isEkdDisplayHidden : false,
     bp: req.body.bp,
     spo2: req.body.spo2,
     etco2: req.body.etco2,
@@ -358,6 +359,7 @@ exports.findByCode = async (req, res) => {
       noiseLevel: data.noiseLevel,
       sessionCode: data.sessionCode,
       isActive: data.isActive,
+      isEkdDisplayHidden: data.isEkdDisplayHidden,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       bp: data.bp,
@@ -523,7 +525,8 @@ exports.getSessionStudentsByCode = async (req, res) => {
       students: students,
       hasConnectedStudents: students.length > 0,
       connectedStudentsCount: students.length,
-      isActive: session.isActive
+      isActive: session.isActive,
+      isEkdDisplayHidden: session.isEkdDisplayHidden
     } : students;
     
     res.send(response);

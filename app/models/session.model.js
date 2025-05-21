@@ -32,7 +32,13 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       type: Sequelize.BOOLEAN,
       defaultValue: true,
       comment: "Flag indicating if session is active"
-    },    createdAt: {
+    },
+    isEkdDisplayHidden: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+      comment: "Flag indicating if EKD display is hidden"
+    },    
+    createdAt: {
       type: Sequelize.DATE,
       defaultValue: Sequelize.NOW,
       comment: "Date when session was created"
