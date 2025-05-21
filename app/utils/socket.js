@@ -133,8 +133,6 @@ module.exports = {
           }`
         );
 
-        socket.join(`code-${code}`);
-
         socket.userData = { name, surname, albumNumber };
         try {
           const [student, created] = await Student.findOrCreate({
@@ -150,69 +148,84 @@ module.exports = {
           }
 
           const session = await Session.findOne({
-            where: { sessionCode: code },
+            where: { 
+              sessionCode: code,
+              isActive: true 
+            },
           });
 
-          if (session) {
-            const [studentSession, sessionCreated] =
-              await StudentSession.findOrCreate({
-                where: {
-                  studentId: student.id,
-                  sessionId: session.sessionId,
-                },
-                defaults: {
-                  active: true,
-                  joinedAt: new Date(),
-                },
-              });
+          if (!session) {
+            console.log(`Student couldn't join: Session ${code} not found or not active`);
+            socket.emit("joined-code", {
+              success: false,
+              code,
+              message: "Session not found or not active"
+            });
+            return;
+          }
 
-            if (!sessionCreated) {
-              await studentSession.update({
+          socket.join(`code-${code}`);
+          
+          const [studentSession, sessionCreated] =
+            await StudentSession.findOrCreate({
+              where: {
+                studentId: student.id,
+                sessionId: session.sessionId,
+              },
+              defaults: {
                 active: true,
                 joinedAt: new Date(),
-              });
-            }
+              },
+            });
 
-            socket.join(`student-${student.id}`); 
-            console.log(`Student ${student.id} dołączył do swojego pokoju`);
-
-            socket.studentData = {
-              studentId: student.id,
-              sessionId: session.sessionId,
-            };
-
-            console.log(
-              `Student ${student.id} (${student.name} ${student.surname}) joined session ${session.sessionId}`
-            );
-
-            const studentInfo = {
-              id: student.id,
-              name: student.name,
-              surname: student.surname,
-              albumNumber: student.albumNumber,
-            };
-
-            // Emit the update to examiners subscribed to this session
-            module.exports.emitExaminerUpdate(
-              session.sessionId,
-              "join",
-              studentInfo
-              
-            );
-          } else {
-            console.log(`No session found with code: ${code}`);
+          if (!sessionCreated) {
+            await studentSession.update({
+              active: true,
+              joinedAt: new Date(),
+            });
           }
+
+          socket.join(`student-${student.id}`); 
+          console.log(`Student ${student.id} dołączył do swojego pokoju`);
+
+          socket.studentData = {
+            studentId: student.id,
+            sessionId: session.sessionId,
+          };
+
+          console.log(
+            `Student ${student.id} (${student.name} ${student.surname}) joined session ${session.sessionId}`
+          );
+
+          const studentInfo = {
+            id: student.id,
+            name: student.name,
+            surname: student.surname,
+            albumNumber: student.albumNumber,
+          };
+
+          module.exports.emitExaminerUpdate(
+            session.sessionId,
+            "join",
+            studentInfo
+          );
+          
+          socket.emit("joined-code", {
+            success: true,
+            code,
+            name,
+            surname,
+            albumNumber,
+          });
+
         } catch (error) {
           console.error("Error adding student to session:", error);
+          socket.emit("joined-code", {
+            success: false,
+            code,
+            message: "Error joining session"
+          });
         }
-
-        socket.emit("joined-code", {
-          success: true,
-          code,
-          name,
-          surname,
-          albumNumber,
-        });
 
         if (socket.previousCode && socket.previousCode !== code) {
           socket.leave(`code-${socket.previousCode}`);
@@ -532,6 +545,43 @@ module.exports = {
     } catch (error) {
       console.error(`Error syncing student session status for ${sessionCode}:`, error);
       return null;
+    }
+  },
+
+  emitSessionDeleted: async (sessionCode) => {
+    if (!io) {
+      throw new Error("Socket.io not initialized");
+    }
+
+    try {
+      console.log(`Emitting session-deleted event for session code ${sessionCode}`);
+      
+      // Send session-deleted event to all clients in the session room
+      io.to(`code-${sessionCode}`).emit('session-deleted', {});
+      
+      // Disconnect all students from the session room
+      const sockets = await io.in(`code-${sessionCode}`).fetchSockets();
+      for (const socket of sockets) {
+        if (socket.studentData) {
+          try {
+            const { studentId, sessionId } = socket.studentData;
+            await StudentSession.update(
+              { active: false },
+              {
+                where: {
+                  studentId,
+                  sessionId,
+                }
+              }
+            );
+            console.log(`Marked student ${studentId} as inactive in deleted/deactivated session ${sessionId}`);
+          } catch (error) {
+            console.error("Error updating student session status on deletion:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error emitting session-deleted event for ${sessionCode}:`, error);
     }
   },
 };

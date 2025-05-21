@@ -222,7 +222,11 @@ exports.update = (req, res) => {
     .then(num => {
       if (num == 1) {
         Session.findByPk(sessionId).then(updatedSession => {
-          socketUtils.emitSessionUpdate('session-updated', updatedSession, `code-${updatedSession.sessionCode}`);
+          if (req.body.isActive === false) {
+            socketUtils.emitSessionDeleted(updatedSession.sessionCode);
+          } else {
+            socketUtils.emitSessionUpdate('session-updated', updatedSession, `code-${updatedSession.sessionCode}`);
+          }
         });
 
         res.send({
@@ -257,6 +261,9 @@ exports.delete = (req, res) => {
         });
         return;
       }
+      
+      // Store the session code before deleting
+      const sessionCode = session.sessionCode;
 
       Session.destroy({
         where: { 
@@ -266,6 +273,9 @@ exports.delete = (req, res) => {
       })
         .then(num => {
           if (num == 1) {
+            // Notify all connected students that the session has been deleted
+            socketUtils.emitSessionDeleted(sessionCode);
+            
             res.send({
               message: "Session was deleted successfully!"
             });
@@ -309,11 +319,17 @@ exports.findByCode = async (req, res) => {
   const isExaminer = req.query.isExaminer === 'true';
   const syncConnected = req.query.syncConnected === 'true';
   
-  const whereClause = req.userId ? 
-    { sessionCode: code, userId: req.userId } : 
-    { sessionCode: code };
-
   try {
+    let whereClause = { sessionCode: code };
+    
+    // For non-examiners (students), only allow access to active sessions
+    if (!isExaminer) {
+      whereClause.isActive = true;
+    } else if (req.userId) {
+      // For examiners, only show their own sessions
+      whereClause.userId = req.userId;
+    }
+
     const data = await Session.findOne({
       where: whereClause,
       include: [{
@@ -462,18 +478,24 @@ exports.getSessionStudentsByCode = async (req, res) => {
   const isExaminer = req.query.isExaminer === 'true';
   const syncConnected = req.query.syncConnected === 'true';
   
-  const whereClause = req.userId ? 
-    { sessionCode: code, userId: req.userId } : 
-    { sessionCode: code };
-  
   try {
+    let whereClause = { sessionCode: code };
+    
+    // For non-examiners (students), only allow access to active sessions
+    if (!isExaminer) {
+      whereClause.isActive = true;
+    } else if (req.userId) {
+      // For examiners, only show their own sessions
+      whereClause.userId = req.userId;
+    }
+  
     const session = await Session.findOne({
       where: whereClause
     });
 
     if (!session) {
       return res.status(404).send({
-        message: `Session with code=${code} not found.`
+        message: `Session with code=${code} not found${!isExaminer ? " or not active" : ""}.`
       });
     }
 
@@ -501,9 +523,9 @@ exports.getSessionStudentsByCode = async (req, res) => {
       students: students,
       hasConnectedStudents: students.length > 0,
       connectedStudentsCount: students.length,
-      syncPerformed: syncConnected
+      isActive: session.isActive
     } : students;
-
+    
     res.send(response);
   } catch (err) {
     res.status(500).send({
