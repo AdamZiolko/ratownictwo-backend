@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
@@ -9,7 +8,6 @@ const os = require("os");
 const app = express();
 const server = http.createServer(app);
 
-// Ustawienie CORS
 app.use(
   cors({
     origin: true,
@@ -21,14 +19,12 @@ app.options("*", cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ------------------ IMPORT MODELI ------------------
 const db = require("./app/models");
 const Role = db.role;
-const Preset = db.Preset; // <— Tutaj definiujemy model Preset
+const Preset = db.Preset; 
 
-// ------------------ SYNCHRONIZACJA BAZY ------------------
 db.sequelize
-  .sync({ force: true }) // na potrzeby pierwszego seedowania robimy force: true; w produkcji ustaw na false
+  .sync({ force: false }) 
   .then(async () => {
     console.log("✅ Baza zsynchronizowana (sequelize.sync).");
     await checkRoles();
@@ -38,7 +34,6 @@ db.sequelize
     console.error("❌ Błąd podczas synchronizacji bazy:", err);
   });
 
-// ------------------ ROUTES ------------------
 app.get("/", (req, res) => {
   res.json({ message: "Welcome." });
 });
@@ -50,11 +45,9 @@ require("./app/routes/user.routes")(app);
 require("./app/routes/session.routes")(app);
 require("./app/routes/preset.routes")(app);
 
-// ------------------ SOCKET.IO ------------------
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);
 
-// ------------------ SEED ROLEI ------------------
 async function checkRoles() {
   try {
     const count = await Role.count();
@@ -75,17 +68,14 @@ async function initialRoles() {
   await Role.create({ id: 3, name: "admin" });
 }
 
-// ------------------ SEED DOMYŚLNYCH PRESETÓW ------------------
 async function seedDefaultPreset() {
   try {
-    // Sprawdź, czy w bazie już istnieje preset z isDefault = true
     const existing = await Preset.findOne({ where: { isDefault: true } });
     if (!existing) {
       console.log("Brak domyślnego presetu – wstawiam przykład.");
       await Preset.create({
         name: "Przykładowy Preset Domyślny",
         data: {
-          // dowolny obiekt JSON (przykładowe pola)
           rhythmType: "4/4",
           beatsPerMinute: 120,
           noiseLevel: "low",
@@ -108,7 +98,6 @@ async function seedDefaultPreset() {
   }
 }
 
-// ------------------ ENDPOINT Z SIECIĄ ------------------
 app.get("/network-info", (req, res) => {
   const interfaces = os.networkInterfaces();
   const results = {};
@@ -128,7 +117,6 @@ app.get("/network-info", (req, res) => {
   });
 });
 
-// ------------------ START SERWERA ------------------
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, "0.0.0.0", () => {
   console.log("Serwer dostępny pod adresami:");

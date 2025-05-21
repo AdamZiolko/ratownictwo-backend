@@ -1,4 +1,3 @@
-// app/models/preset.model.js
 
 module.exports = (sequelize, DataTypes) => {
   const Preset = sequelize.define(
