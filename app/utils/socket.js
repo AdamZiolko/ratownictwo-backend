@@ -13,8 +13,8 @@ module.exports = {
         // origin: ["http://localhost:8081", "http://localhost:3000"],
         origin: [ 
         "http://localhost:8081",
-        `http://192.168.1.111:8081`,     
-        `exp://192.168.1.111:8081`,      
+        `http://192.168.100.7:8081`,     
+        `exp://192.168.100.7:8081`,      
         "exp+ratownictwo://*"
       ],
         methods: ["GET", "POST", "PUT", "DELETE"],

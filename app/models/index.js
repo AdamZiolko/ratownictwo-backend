@@ -28,6 +28,8 @@ db.refreshToken = require("../models/refreshToken.model.js")(sequelize, Sequeliz
 db.session = require("../models/session.model.js")(sequelize, Sequelize);
 db.student = require("../models/student.model.js")(sequelize, Sequelize);
 db.studentSession = require("../models/studentSession.model.js")(sequelize, Sequelize);
+db.Preset = require("./preset.model.js")(sequelize, Sequelize);
+
 
 db.role.belongsToMany(db.user, {
   through: "user_roles"
@@ -60,6 +62,12 @@ db.session.belongsToMany(db.student, {
   through: db.studentSession,
   foreignKey: 'sessionId',
   otherKey: 'studentId'
+});
+
+Object.keys(db).forEach((modelName) => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
 });
 
 db.ROLES = ["user", "admin", "moderator"];
