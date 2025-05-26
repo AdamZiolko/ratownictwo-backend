@@ -30,6 +30,7 @@ db.student = require("../models/student.model.js")(sequelize, Sequelize);
 db.studentSession = require("../models/studentSession.model.js")(sequelize, Sequelize);
 db.Preset = require("./preset.model.js")(sequelize, Sequelize);
 db.audio = require("./audio.model.js")(sequelize, Sequelize);
+db.colorConfig = require("./colorConfig.model.js")(sequelize, Sequelize);
 
 
 db.role.belongsToMany(db.user, {
@@ -51,6 +52,16 @@ db.session.belongsTo(db.user, {
 });
 db.user.hasMany(db.session, {
   foreignKey: 'userId', targetKey: 'id'
+});
+
+db.colorConfig.belongsTo(db.session, {
+  foreignKey: 'sessionId',
+  targetKey: 'sessionId'
+});
+db.session.hasMany(db.colorConfig, {
+  foreignKey: 'sessionId',
+  targetKey: 'sessionId',
+  as: 'colorConfigs'
 });
 
 db.student.belongsToMany(db.session, {

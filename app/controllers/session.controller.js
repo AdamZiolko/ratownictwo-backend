@@ -2,6 +2,7 @@ const db = require("../models");
 const Session = db.session;
 const Student = db.student;
 const StudentSession = db.studentSession;
+const ColorConfig = db.colorConfig;
 const socketUtils = require("../utils/socket");
 
 exports.create = (req, res) => {
@@ -35,9 +36,22 @@ exports.create = (req, res) => {
     etco2: req.body.etco2,
     rr: req.body.rr
   };
-  
-  Session.create(session)
-    .then(data => {
+    Session.create(session)
+    .then(async data => {
+      // Create default color configurations
+      const defaultColorConfigs = [
+        { sessionId: data.sessionId, colorType: 'red', soundFileName: 'serce.mp3', isEnabled: true },
+        { sessionId: data.sessionId, colorType: 'green', soundFileName: 'drzwi.mp3', isEnabled: true },
+        { sessionId: data.sessionId, colorType: 'blue', soundFileName: 'kaszel.mp3', isEnabled: true }
+      ];
+      
+      try {
+        await ColorConfig.bulkCreate(defaultColorConfigs);
+        console.log(`Created default color configurations for session ${data.sessionId}`);
+      } catch (colorConfigError) {
+        console.error('Error creating default color configurations:', colorConfigError);
+      }
+      
       res.send(data);
     })
     .catch(err => {
@@ -329,19 +343,25 @@ exports.findByCode = async (req, res) => {
     } else if (req.userId) {
       // For examiners, only show their own sessions
       whereClause.userId = req.userId;
-    }
-
-    const data = await Session.findOne({
+    }    const data = await Session.findOne({
       where: whereClause,
-      include: [{
-        model: Student,
-        through: {
-          attributes: ['active', 'joinedAt'],
-          where: { active: true }
+      include: [
+        {
+          model: Student,
+          through: {
+            attributes: ['active', 'joinedAt'],
+            where: { active: true }
+          },
+          attributes: ['id', 'name', 'surname', 'albumNumber'],
+          required: false
         },
-        attributes: ['id', 'name', 'surname', 'albumNumber'],
-        required: false
-      }]
+        {
+          model: ColorConfig,
+          as: 'colorConfigs',
+          attributes: ['id', 'colorType', 'soundFileName', 'isEnabled'],
+          required: false
+        }
+      ]
     });
     
     if (!data) {
@@ -349,8 +369,7 @@ exports.findByCode = async (req, res) => {
         message: `No sessions found with code=${code}.`
       });
     }
-    
-    const objectToReturn = {
+      const objectToReturn = {
       sessionId: data.sessionId,
       name: data.name,
       temperature: data.temperature,
@@ -366,7 +385,8 @@ exports.findByCode = async (req, res) => {
       spo2: data.spo2,
       etco2: data.etco2,
       rr: data.rr,
-      students: data.students || []
+      students: data.students || [],
+      colorConfigs: data.colorConfigs || []
     };
     
     if (isExaminer && syncConnected) {
