@@ -114,6 +114,12 @@ module.exports = {
       io.to(`student-${studentId}`).emit('audio-command', { command, soundName, loop });
       });
 
+      // Handler dla server audio commands
+      socket.on('server-audio-command', ({ code, command, audioId, loop }) => {
+        console.log(`🎵 Server audio command for session ${code}:`, { command, audioId, loop });
+        io.to(`code-${code}`).emit('server-audio-command', { command, audioId, loop });
+      });
+
       socket.on("examiner-unsubscribe", () => {
         if (socket.examinerData && socket.examinerData.sessionCode) {
           socket.leave(`examiner-${socket.examinerData.sessionCode}`);

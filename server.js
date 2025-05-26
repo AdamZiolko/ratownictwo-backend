@@ -8,6 +8,17 @@ const os = require("os");
 const app = express();
 const server = http.createServer(app);
 
+// Zwiększenie timeout serwera do 10 minut
+server.timeout = 10 * 60 * 1000; // 10 minut
+server.keepAliveTimeout = 10 * 60 * 1000; // 10 minut
+server.headersTimeout = 10 * 60 * 1000; // 10 minut
+
+// Dodatkowo ustaw właściwości Keep-Alive
+server.on('connection', (socket) => {
+  socket.setKeepAlive(true, 60000); // Keep-alive co 60 sekund
+  socket.setTimeout(10 * 60 * 1000); // 10 minut timeout
+});
+
 app.use(
   cors({
     origin: true,
@@ -16,8 +27,26 @@ app.use(
 );
 app.options("*", cors({ origin: true, credentials: true }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware dla zwiększenia timeout dla wszystkich żądań
+app.use((req, res, next) => {
+  // Ustaw timeout na 10 minut dla wszystkich żądań
+  req.setTimeout(10 * 60 * 1000);
+  res.setTimeout(10 * 60 * 1000);
+  
+  // Dodaj nagłówki dla Keep-Alive
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=600, max=1000');
+  
+  next();
+});
+
+// Zwiększenie limitów dla dużych plików
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '50mb',
+  parameterLimit: 50000
+}));
 
 const db = require("./app/models");
 const Role = db.role;
@@ -38,12 +67,24 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome." });
 });
 
+// Health check endpoint for mobile connectivity testing
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    version: "1.0.0"
+  });
+});
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs, { explorer: true }));
 
 require("./app/routes/auth.routes")(app);
 require("./app/routes/user.routes")(app);
 require("./app/routes/session.routes")(app);
 require("./app/routes/preset.routes")(app);
+require("./app/routes/audio.routes")(app);
 
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);

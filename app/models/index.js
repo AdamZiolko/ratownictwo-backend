@@ -29,6 +29,7 @@ db.session = require("../models/session.model.js")(sequelize, Sequelize);
 db.student = require("../models/student.model.js")(sequelize, Sequelize);
 db.studentSession = require("../models/studentSession.model.js")(sequelize, Sequelize);
 db.Preset = require("./preset.model.js")(sequelize, Sequelize);
+db.audio = require("./audio.model.js")(sequelize, Sequelize);
 
 
 db.role.belongsToMany(db.user, {
@@ -62,6 +63,21 @@ db.session.belongsToMany(db.student, {
   through: db.studentSession,
   foreignKey: 'sessionId',
   otherKey: 'studentId'
+});
+
+db.audio.belongsTo(db.user, {
+  foreignKey: 'createdBy',
+  as: 'creator'
+});
+
+db.audio.belongsTo(db.user, {
+  foreignKey: 'updatedBy',
+  as: 'updater'
+});
+
+db.user.hasMany(db.audio, {
+  foreignKey: 'createdBy',
+  as: 'createdAudios'
 });
 
 Object.keys(db).forEach((modelName) => {

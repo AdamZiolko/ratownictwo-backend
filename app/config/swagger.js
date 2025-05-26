@@ -4,9 +4,9 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Node.js JWT Authentication API',
+      title: 'Ratownictwo API',
       version: '1.0.0',
-      description: 'API documentation for JWT Authentication with PostgreSQL',
+      description: 'API documentation for Ratownictwo application with JWT Authentication and PostgreSQL',
       contact: {
         name: 'API Support',
         email: 'support@example.com'
@@ -18,12 +18,35 @@ const options = {
         description: 'Development server',
       },
     ],
+    tags: [
+      {
+        name: 'Auth',
+        description: 'Authentication endpoints'
+      },
+      {
+        name: 'User',
+        description: 'User management endpoints'
+      },
+      {
+        name: 'Session',
+        description: 'Session management endpoints'
+      },
+      {
+        name: 'Preset',
+        description: 'Preset configuration endpoints'
+      },
+      {
+        name: 'Audio',
+        description: 'Audio file management endpoints - Upload, download, stream, and manage audio files'
+      }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+          description: 'Enter JWT token obtained from /api/auth/signin endpoint'
         },
       },
     },
