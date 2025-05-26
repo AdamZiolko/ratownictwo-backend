@@ -30,7 +30,8 @@ db.student = require("../models/student.model.js")(sequelize, Sequelize);
 db.studentSession = require("../models/studentSession.model.js")(sequelize, Sequelize);
 db.Preset = require("./preset.model.js")(sequelize, Sequelize);
 db.audio = require("./audio.model.js")(sequelize, Sequelize);
-
+db.template = require("./template.model.js")(sequelize, Sequelize);
+db.testResult = require("./testResult.model.js")(sequelize, Sequelize);
 
 db.role.belongsToMany(db.user, {
   through: "user_roles"
@@ -86,6 +87,41 @@ Object.keys(db).forEach((modelName) => {
   }
 });
 
+db.template.belongsTo(db.user, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+db.testResult.belongsTo(db.user, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+db.testResult.belongsTo(db.session, {
+  foreignKey: 'sessionId',
+  as: 'session'
+});
+
 db.ROLES = ["user", "admin", "moderator"];
+
+db.testResult.belongsTo(db.session, {
+  foreignKey: 'sessionId',
+  as: 'testSession' 
+});
+
+db.testResult.belongsTo(db.user, {
+  foreignKey: 'userId',
+  as: 'testUser' 
+});
+
+db.session.hasMany(db.testResult, {
+  foreignKey: 'sessionId',
+  as: 'testResults'
+});
+
+db.user.hasMany(db.testResult, {
+  foreignKey: 'userId',
+  as: 'testResults'
+});
 
 module.exports = db;

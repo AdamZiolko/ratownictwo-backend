@@ -85,7 +85,8 @@ require("./app/routes/user.routes")(app);
 require("./app/routes/session.routes")(app);
 require("./app/routes/preset.routes")(app);
 require("./app/routes/audio.routes")(app);
-
+require("./app/routes/template.routes")(app);
+require("./app/routes/testResult.routes")(app);
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);
 
