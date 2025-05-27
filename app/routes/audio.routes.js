@@ -218,7 +218,6 @@ module.exports = function(app) {
    */
   app.get(
     "/api/audio/:id/stream",
-    [authJwt.verifyToken],
     controller.streamAudio
   );
 
@@ -274,7 +273,6 @@ module.exports = function(app) {
    */
   app.get(
     "/api/audio/:id/download",
-    [authJwt.verifyToken],
     controller.downloadAudio
   );
   /**
