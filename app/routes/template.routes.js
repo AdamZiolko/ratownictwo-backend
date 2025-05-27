@@ -10,14 +10,21 @@ module.exports = function(app) {
     next();
   });
 
-app.post(
-  "/api/checklist/templates",
-  [authJwt.verifyToken],
-  controller.createTemplate
-);
-app.get(
-  "/api/checklist/templates",
-  [authJwt.verifyToken],
-  controller.getAllTemplates
-);
+  app.post(
+    "/api/checklist/templates",
+    [authJwt.verifyToken],
+    controller.createOrUpdateTemplate
+  );
+
+  app.get(
+    "/api/checklist/templates",
+    [authJwt.verifyToken],
+    controller.getAllTemplates
+  );
+
+  app.delete(
+    "/api/checklist/templates/:id",
+    [authJwt.verifyToken],
+    controller.deleteTemplate
+  );
 };
