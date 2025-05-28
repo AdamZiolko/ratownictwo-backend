@@ -30,8 +30,10 @@ db.student = require("../models/student.model.js")(sequelize, Sequelize);
 db.studentSession = require("../models/studentSession.model.js")(sequelize, Sequelize);
 db.Preset = require("./preset.model.js")(sequelize, Sequelize);
 db.audio = require("./audio.model.js")(sequelize, Sequelize);
+db.audioFile = require("./audio.model.js")(sequelize, Sequelize); // Alias for consistency
 db.template = require("./template.model.js")(sequelize, Sequelize);
 db.testResult = require("./testResult.model.js")(sequelize, Sequelize);
+db.colorConfig = require("./colorConfig.model.js")(sequelize, Sequelize);
 
 db.role.belongsToMany(db.user, {
   through: "user_roles"
@@ -122,6 +124,27 @@ db.session.hasMany(db.testResult, {
 db.user.hasMany(db.testResult, {
   foreignKey: 'userId',
   as: 'testResults'
+});
+
+// Color configuration relationships
+db.colorConfig.belongsTo(db.session, {
+  foreignKey: 'sessionId',
+  as: 'session'
+});
+
+db.session.hasMany(db.colorConfig, {
+  foreignKey: 'sessionId',
+  as: 'colorConfigs'
+});
+
+db.colorConfig.belongsTo(db.audio, {
+  foreignKey: 'serverAudioId',
+  as: 'serverAudio'
+});
+
+db.audio.hasMany(db.colorConfig, {
+  foreignKey: 'serverAudioId',
+  as: 'colorConfigs'
 });
 
 module.exports = db;

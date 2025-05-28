@@ -556,7 +556,6 @@ module.exports = {
       return null;
     }
   },
-
   emitSessionDeleted: async (sessionCode) => {
     if (!io) {
       throw new Error("Socket.io not initialized");
@@ -591,6 +590,30 @@ module.exports = {
       }
     } catch (error) {
       console.error(`Error emitting session-deleted event for ${sessionCode}:`, error);
+    }
+  },
+
+  emitToSession: async (sessionId, event, data) => {
+    if (!io) {
+      throw new Error("Socket.io not initialized");
+    }
+
+    try {
+      const session = await Session.findByPk(sessionId);
+      if (!session) {
+        console.error(`Cannot find session with id=${sessionId}`);
+        return;
+      }
+
+      // Emit to all clients in the session
+      io.to(`code-${session.sessionCode}`).emit(event, data);
+      
+      // Also emit to examiners in the session
+      io.to(`examiner-${session.sessionCode}`).emit(event, data);
+      
+      console.log(`Emitted ${event} to session ${sessionId} (code: ${session.sessionCode})`);
+    } catch (error) {
+      console.error(`Error emitting to session ${sessionId}:`, error);
     }
   },
 };

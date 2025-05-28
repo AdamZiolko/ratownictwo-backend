@@ -53,7 +53,7 @@ const Role = db.role;
 const Preset = db.Preset; 
 
 db.sequelize
-  .sync({ force: false }) 
+  .sync({ force: true }) 
   .then(async () => {
     console.log("✅ Baza zsynchronizowana (sequelize.sync).");
     await checkRoles();
@@ -87,6 +87,7 @@ require("./app/routes/preset.routes")(app);
 require("./app/routes/audio.routes")(app);
 require("./app/routes/template.routes")(app);
 require("./app/routes/testResult.routes")(app);
+require("./app/routes/colorConfig.routes")(app);
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);
 
