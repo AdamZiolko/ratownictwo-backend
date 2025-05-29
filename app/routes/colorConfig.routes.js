@@ -171,10 +171,9 @@ module.exports = function(app) {
    *       500:
    *         description: Internal server error   */
   app.post("/api/color-config/:sessionId", [verifyToken], controller.saveColorConfig);
-
   /**
    * @swagger
-   * /api/color-config/{sessionId}/{color}:
+   * /api/color-config/{sessionId}/{id}:
    *   delete:
    *     summary: Delete color configuration
    *     description: Delete a specific color configuration for a session
@@ -189,12 +188,11 @@ module.exports = function(app) {
    *           type: string
    *         description: The session ID
    *       - in: path
-   *         name: color
+   *         name: id
    *         required: true
    *         schema:
-   *           type: string
-   *           enum: [red, green, blue, yellow, orange, purple]
-   *         description: The color to delete
+   *           type: integer
+   *         description: The color configuration ID to delete
    *     responses:
    *       200:
    *         description: Color configuration deleted successfully
@@ -204,7 +202,7 @@ module.exports = function(app) {
    *         description: Session or color configuration not found
    *       500:
    *         description: Internal server error   */
-  app.delete("/api/color-config/:sessionId/:color", [verifyToken], controller.deleteColorConfig);
+  app.delete("/api/color-config/:sessionId/:id", [verifyToken], controller.deleteColorConfig);
 
   /**
    * @swagger
@@ -245,7 +243,6 @@ module.exports = function(app) {
    *       500:
    *         description: Internal server error   */
   app.post("/api/color-config/:sessionId/bulk", [verifyToken], controller.bulkUpdateColorConfigs);
-
   // Add toggle endpoint
-  app.put("/api/color-config/:sessionId/:color/toggle", [verifyToken], controller.toggleColorConfig);
+  app.put("/api/color-config/:sessionId/:id/toggle", [verifyToken], controller.toggleColorConfig);
 };

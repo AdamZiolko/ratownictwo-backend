@@ -14,8 +14,7 @@ module.exports = (sequelize, Sequelize) => {
           model: "sessions",
           key: "sessionId",
         },
-      },
-      color: {
+      },      color: {
         type: Sequelize.ENUM(
           "red",
           "green",
@@ -26,6 +25,11 @@ module.exports = (sequelize, Sequelize) => {
           "custom"
         ),
         allowNull: false,
+      },
+      colorIdentifier: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        comment: "Unique identifier for custom colors (RGB hash) or predefined color name",
       },
       customColorRgb: {
         type: Sequelize.JSON,
@@ -77,12 +81,12 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
       },
-    },
-    {
+    },    {
       indexes: [
         {
           unique: true,
-          fields: ["sessionId", "color"],
+          fields: ["sessionId", "colorIdentifier"],
+          name: "unique_session_color_identifier"
         },
       ],
     }
