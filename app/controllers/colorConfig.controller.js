@@ -91,11 +91,36 @@ exports.getColorConfigsForStudent = async (req, res) => {
 exports.saveColorConfig = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { color, soundName, serverAudioId, isEnabled = true, volume = 1.0, isLooping = false, id } = req.body;
+    const { 
+      color, 
+      soundName, 
+      serverAudioId, 
+      isEnabled = true, 
+      volume = 1.0, 
+      isLooping = false, 
+      customColorRgb,
+      colorTolerance = 0.15,
+      id 
+    } = req.body;
 
     // Validate required fields
     if (!color) {
       return res.status(400).json({ message: "Color is required" });
+    }
+
+    // Validate custom color fields
+    if (color === 'custom') {
+      if (!customColorRgb || typeof customColorRgb.r !== 'number' || typeof customColorRgb.g !== 'number' || typeof customColorRgb.b !== 'number') {
+        return res.status(400).json({ message: "Dla custom koloru wymagane są wartości RGB" });
+      }
+      if (customColorRgb.r < 0 || customColorRgb.g < 0 || customColorRgb.b < 0) {
+        return res.status(400).json({ message: "Wartości RGB muszą być nieujemne" });
+      }
+    }
+
+    // Validate tolerance
+    if (colorTolerance < 0.05 || colorTolerance > 0.5) {
+      return res.status(400).json({ message: "Tolerancja musi być między 5% a 50%" });
     }
 
     // Check if session exists and user has access
@@ -130,10 +155,9 @@ exports.saveColorConfig = async (req, res) => {
 
       if (!colorConfig) {
         return res.status(404).json({ message: "Color configuration not found" });
-      }
-
-      // Check if the new color conflicts with another existing config
-      if (colorConfig.color !== color) {
+      }      // Check if the new color conflicts with another existing config
+      // For custom colors, allow multiple configurations since they have different RGB values
+      if (colorConfig.color !== color && color !== 'custom') {
         const conflictingConfig = await ColorConfig.findOne({
           where: { sessionId, color }
         });
@@ -149,27 +173,50 @@ exports.saveColorConfig = async (req, res) => {
         serverAudioId,
         isEnabled,
         volume,
-        isLooping
-      });
-    } else {
+        isLooping,
+        customColorRgb,
+        colorTolerance
+      });    } else {
       // Create new configuration
-      const [newConfig, wasCreated] = await ColorConfig.findOrCreate({
-        where: { sessionId, color },
-        defaults: {
+      // For custom colors, we don't check for duplicates since they have unique RGB values
+      // For other colors, we use findOrCreate to prevent duplicates
+      
+      if (color === 'custom') {
+        // Always create new custom color configuration
+        colorConfig = await ColorConfig.create({
+          sessionId,
+          color,
           soundName,
           serverAudioId,
           isEnabled,
           volume,
-          isLooping
+          isLooping,
+          customColorRgb,
+          colorTolerance
+        });
+        created = true;
+      } else {
+        // For predefined colors, use findOrCreate
+        const [newConfig, wasCreated] = await ColorConfig.findOrCreate({
+          where: { sessionId, color },
+          defaults: {
+            soundName,
+            serverAudioId,
+            isEnabled,
+            volume,
+            isLooping,
+            customColorRgb,
+            colorTolerance
+          }
+        });
+
+        if (!wasCreated) {
+          return res.status(400).json({ message: "A configuration with this color already exists" });
         }
-      });
 
-      if (!wasCreated) {
-        return res.status(400).json({ message: "A configuration with this color already exists" });
+        colorConfig = newConfig;
+        created = true;
       }
-
-      colorConfig = newConfig;
-      created = true;
     }// Get the updated config with audio file details
     const updatedConfig = await ColorConfig.findOne({
       where: { id: colorConfig.id },

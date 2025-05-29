@@ -11,10 +11,23 @@ module.exports = (sequelize, Sequelize) => {
         model: 'sessions',
         key: 'sessionId'
       }
-    },
-    color: {
-      type: Sequelize.ENUM('red', 'green', 'blue', 'yellow', 'orange', 'purple'),
+    },    color: {
+      type: Sequelize.ENUM('red', 'green', 'blue', 'yellow', 'orange', 'purple', 'custom'),
       allowNull: false
+    },
+    customColorRgb: {
+      type: Sequelize.JSON,
+      allowNull: true,
+      comment: 'RGB values for custom color detection: {r: number, g: number, b: number}'
+    },
+    colorTolerance: {
+      type: Sequelize.FLOAT,
+      defaultValue: 0.15,
+      validate: {
+        min: 0.05,
+        max: 0.5
+      },
+      comment: 'Color detection tolerance (5-50%)'
     },
     soundName: {
       type: Sequelize.STRING,
