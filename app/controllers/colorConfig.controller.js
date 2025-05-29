@@ -94,6 +94,7 @@ exports.saveColorConfig = async (req, res) => {
     const { 
       color, 
       soundName, 
+      displayName,
       serverAudioId, 
       isEnabled = true, 
       volume = 1.0, 
@@ -155,7 +156,9 @@ exports.saveColorConfig = async (req, res) => {
 
       if (!colorConfig) {
         return res.status(404).json({ message: "Color configuration not found" });
-      }      // Check if the new color conflicts with another existing config
+      }
+
+      // Check if the new color conflicts with another existing config
       // For custom colors, allow multiple configurations since they have different RGB values
       if (colorConfig.color !== color && color !== 'custom') {
         const conflictingConfig = await ColorConfig.findOne({
@@ -170,15 +173,18 @@ exports.saveColorConfig = async (req, res) => {
       await colorConfig.update({
         color,
         soundName,
+        displayName,
         serverAudioId,
         isEnabled,
         volume,
         isLooping,
         customColorRgb,
         colorTolerance
-      });    } else {
+      });
+
+    } else {
       // Create new configuration
-      // For custom colors, we don't check for duplicates since they have unique RGB values
+      // For custom colors, we don't check for duplicates since they have different RGB values
       // For other colors, we use findOrCreate to prevent duplicates
       
       if (color === 'custom') {
@@ -187,6 +193,7 @@ exports.saveColorConfig = async (req, res) => {
           sessionId,
           color,
           soundName,
+          displayName,
           serverAudioId,
           isEnabled,
           volume,
@@ -201,6 +208,7 @@ exports.saveColorConfig = async (req, res) => {
           where: { sessionId, color },
           defaults: {
             soundName,
+            displayName,
             serverAudioId,
             isEnabled,
             volume,
@@ -217,7 +225,9 @@ exports.saveColorConfig = async (req, res) => {
         colorConfig = newConfig;
         created = true;
       }
-    }// Get the updated config with audio file details
+    }
+
+    // Get the updated config with audio file details
     const updatedConfig = await ColorConfig.findOne({
       where: { id: colorConfig.id },
       include: [{
@@ -236,8 +246,7 @@ exports.saveColorConfig = async (req, res) => {
     });
   } catch (error) {
     console.error("Error saving color configuration:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
+    res.status(500).json({ message: "Internal server error" });  }
 };
 
 /**
