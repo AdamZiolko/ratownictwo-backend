@@ -102,21 +102,18 @@ exports.saveColorConfig = async (req, res) => {
       customColorRgb,
       colorTolerance = 0.15,
       id 
-    } = req.body;
-
-    // Validate required fields
-    if (!color) {
-      return res.status(400).json({ message: "Color is required" });
+    } = req.body;    // Validate required fields
+    if (!color || color !== 'custom') {
+      return res.status(400).json({ message: "Color must be 'custom'" });
     }
 
-    // Validate custom color fields
-    if (color === 'custom') {
-      if (!customColorRgb || typeof customColorRgb.r !== 'number' || typeof customColorRgb.g !== 'number' || typeof customColorRgb.b !== 'number') {
-        return res.status(400).json({ message: "Dla custom koloru wymagane są wartości RGB" });
-      }
-      if (customColorRgb.r < 0 || customColorRgb.g < 0 || customColorRgb.b < 0) {
-        return res.status(400).json({ message: "Wartości RGB muszą być nieujemne" });
-      }
+    // Validate custom color fields (now required for all configurations)
+    if (!customColorRgb || typeof customColorRgb.r !== 'number' || typeof customColorRgb.g !== 'number' || typeof customColorRgb.b !== 'number') {
+      return res.status(400).json({ message: "Wymagane są wartości RGB dla koloru" });
+    }
+    if (customColorRgb.r < 0 || customColorRgb.g < 0 || customColorRgb.b < 0 || 
+        customColorRgb.r > 255 || customColorRgb.g > 255 || customColorRgb.b > 255) {
+      return res.status(400).json({ message: "Wartości RGB muszą być z zakresu 0-255" });
     }
 
     // Validate tolerance
@@ -143,17 +140,8 @@ exports.saveColorConfig = async (req, res) => {
       if (!audioFile) {
         return res.status(400).json({ message: "Server audio file not found" });
       }
-    }
-
-    // Generate color identifier
-    let colorIdentifier;
-    if (color === 'custom') {
-      // For custom colors, create a unique identifier based on RGB values
-      colorIdentifier = `custom_${customColorRgb.r}_${customColorRgb.g}_${customColorRgb.b}`;
-    } else {
-      // For predefined colors, use the color name as identifier
-      colorIdentifier = color;
-    }
+    }    // Generate color identifier based on RGB values
+    const colorIdentifier = `custom_${customColorRgb.r}_${customColorRgb.g}_${customColorRgb.b}`;
 
     let colorConfig;
     let created = false;
@@ -326,8 +314,12 @@ exports.bulkUpdateColorConfigs = async (req, res) => {
         colorTolerance = 0.15
       } = config;
 
-      if (!color) {
-        continue; // Skip invalid configs
+      if (!color || color !== 'custom') {
+        continue; // Skip configs that are not custom
+      }
+
+      if (!customColorRgb) {
+        continue; // Skip custom colors without RGB values
       }
 
       // If serverAudioId is provided, verify it exists
@@ -338,14 +330,8 @@ exports.bulkUpdateColorConfigs = async (req, res) => {
         }
       }
 
-      // Generate color identifier
-      let colorIdentifier;
-      if (color === 'custom') {
-        if (!customColorRgb) continue; // Skip custom colors without RGB values
-        colorIdentifier = `custom_${customColorRgb.r}_${customColorRgb.g}_${customColorRgb.b}`;
-      } else {
-        colorIdentifier = color;
-      }
+      // Generate color identifier based on RGB values
+      const colorIdentifier = `custom_${customColorRgb.r}_${customColorRgb.g}_${customColorRgb.b}`;
 
       let colorConfig;
 

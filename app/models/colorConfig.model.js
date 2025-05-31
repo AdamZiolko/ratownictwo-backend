@@ -16,20 +16,16 @@ module.exports = (sequelize, Sequelize) => {
         },
       },      color: {
         type: Sequelize.ENUM(
-          "red",
-          "green",
-          "blue",
-          "yellow",
-          "orange",
-          "purple",
           "custom"
         ),
         allowNull: false,
+        defaultValue: "custom",
       },
       colorIdentifier: {
         type: Sequelize.STRING,
         allowNull: true,
-        comment: "Unique identifier for custom colors (RGB hash) or predefined color name",
+        comment:
+          "Unique identifier for custom colors (RGB hash) or predefined color name",
       },
       customColorRgb: {
         type: Sequelize.JSON,
@@ -81,12 +77,13 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
       },
-    },    {
+    },
+    {
       indexes: [
         {
           unique: true,
           fields: ["sessionId", "colorIdentifier"],
-          name: "unique_session_color_identifier"
+          name: "unique_session_color_identifier",
         },
       ],
     }

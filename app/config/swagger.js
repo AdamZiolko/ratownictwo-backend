@@ -11,10 +11,9 @@ const options = {
         name: 'API Support',
         email: 'support@example.com'
       },
-    },
-    servers: [
+    },    servers: [
       {
-        url: 'http://localhost:8080',
+        url: 'http://192.168.100.6:8080',
         description: 'Development server',
       },
     ],
@@ -34,10 +33,13 @@ const options = {
       {
         name: 'Preset',
         description: 'Preset configuration endpoints'
-      },
-      {
+      },      {
         name: 'Audio',
         description: 'Audio file management endpoints - Upload, download, stream, and manage audio files'
+      },
+      {
+        name: 'Color Configuration',
+        description: 'Color configuration endpoints for sessions'
       }
     ],
     components: {
