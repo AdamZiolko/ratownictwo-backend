@@ -48,53 +48,10 @@ function generateRSAKeyPair() {
   }
 }
 
-function generateSecureSecrets() {
-  console.log('Generowanie bezpiecznych sekretów...');
-  
-  const jwtSecret = crypto.randomBytes(32).toString('hex');
-  const refreshSecret = crypto.randomBytes(32).toString('hex');
-  const encryptionKey = crypto.randomBytes(32).toString('hex');
-  
-  const envExample = `# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=ratownictwo_db
-DB_USERNAME=your_username
-DB_PASSWORD=your_secure_password
 
-# JWT Configuration (Wygenerowane automatycznie)
-JWT_SECRET=${jwtSecret}
-JWT_REFRESH_SECRET=${refreshSecret}
-JWT_EXPIRATION=3600
-JWT_REFRESH_EXPIRATION=86400
-
-# Encryption Key (dla szyfrowania wrażliwych danych)
-ENCRYPTION_KEY=${encryptionKey}
-
-# Server Configuration
-PORT=3000
-NODE_ENV=development
-
-# File Upload Configuration
-UPLOAD_MAX_SIZE=10485760
-UPLOAD_ALLOWED_TYPES=audio/mpeg,audio/wav,audio/mp3
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# Security Headers
-CORS_ORIGIN=http://localhost:19006
-`;
-
-  fs.writeFileSync(path.join(__dirname, '../.env.example'), envExample);
-  console.log('Plik .env.example został utworzony z bezpiecznymi sekretami');
-  console.log('UWAGA: Skopiuj .env.example do .env i dostosuj wartości do swojego środowiska');
-}
 
 if (require.main === module) {
   generateRSAKeyPair();
-  generateSecureSecrets();
 }
 
-module.exports = { generateRSAKeyPair, generateSecureSecrets };
+module.exports = { generateRSAKeyPair };
