@@ -64,6 +64,19 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       type: Sequelize.INTEGER, 
       comment: "Respiratory rate in breaths per minute"
     }
+  }, {
+    indexes: [
+      {
+        unique: true,
+        fields: ['sessionCode', 'userId'],
+        name: 'unique_session_code_per_user'
+      },
+      {
+        unique: true,
+        fields: ['name', 'userId'],
+        name: 'unique_session_name_per_user'
+      }
+    ]
   });
 
   return Session;

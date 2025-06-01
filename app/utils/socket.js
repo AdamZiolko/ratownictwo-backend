@@ -5,26 +5,53 @@ const StudentSession = db.studentSession;
 const Session = db.session;
 const User = db.user;
 const Role = db.role;
+const jwt = require("jsonwebtoken");
+const config = require("../config/auth.config");
 
 require('dotenv').config();
 
+// Rate limiting dla WebSocket events
+const eventLimits = new Map();
+
+const checkEventLimit = (socketId, eventName) => {
+  const key = `${socketId}:${eventName}`;
+  const now = Date.now();
+  
+  if (!eventLimits.has(key)) {
+    eventLimits.set(key, []);
+  }
+  
+  const events = eventLimits.get(key);
+  // Usuń stare eventy (starsze niż 1 minuta)
+  const filtered = events.filter(time => now - time < 60000);
+  
+  if (filtered.length >= 20) { // Maksymalnie 20 eventów na minutę
+    return false;
+  }
+  
+  filtered.push(now);
+  eventLimits.set(key, filtered);
+  return true;
+};
+
 module.exports = {
   init: (server) => {
-    const corsOrigins = process.env.CORS_ORIGINS 
-      ? process.env.CORS_ORIGINS.split(',')
+    const corsOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',')
       : [
           "http://localhost:8081",
-          "http://192.168.100.7:8081",     
-          "exp://192.168.100.7:8081",      
-          "exp+ratownictwo://*"
+          "http://localhost:3000"
         ];
 
     io = require("socket.io")(server, {
       cors: {
         origin: corsOrigins,
-        methods: ["GET", "POST", "PUT", "DELETE"],
+        methods: ["GET", "POST"],
         credentials: true,
       },
+      // Dodatkowe zabezpieczenia WebSocket
+      transports: ['websocket', 'polling'],
+      allowEIO3: true
     });
     
     setInterval(async () => {
@@ -59,16 +86,40 @@ module.exports = {
       } catch (err) {
         console.error("Error in automatic ghost student cleanup:", err);
       }
-    }, 5 * 60 * 1000); 
-    
+    }, 5 * 60 * 1000);    
     io.on("connection", (socket) => {
-      console.log("A client connected", socket.id);
+      console.log("🔌 Nowe połączenie WebSocket:", socket.id);
+
+      // Middleware weryfikacji tokenu dla WebSocket
+      socket.use((packet, next) => {
+        const [eventName, data] = packet;
+        
+        // Sprawdź rate limiting
+        if (!checkEventLimit(socket.id, eventName)) {
+          console.warn(`⚠️ Rate limit przekroczony dla ${socket.id}, event: ${eventName}`);
+          return next(new Error('Rate limit exceeded'));
+        }
+        
+        // Sprawdź token dla niektórych eventów
+        const securedEvents = ['examiner-subscribe', 'audio-command', 'student-audio-command', 'server-audio-command'];
+        if (securedEvents.includes(eventName) && data?.token) {
+          try {
+            jwt.verify(data.token, config.secret);
+            next();
+          } catch (err) {
+            console.warn(`🚫 Nieprawidłowy token WebSocket dla ${socket.id}`);
+            next(new Error('Invalid token'));
+          }
+        } else {
+          next();
+        }
+      });
 
       socket.on(
         "examiner-subscribe",
         async ({ sessionCode, userId, token }) => {
           console.log(
-            `Examiner ${userId} subscribing to session: ${sessionCode}`
+            `👨‍🏫 Examiner ${userId} subscribing to session: ${sessionCode}`
           );
 
           try {

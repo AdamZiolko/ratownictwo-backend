@@ -24,12 +24,27 @@ const storage = multer.diskStorage({
   }
 });
 
-// Filtr plików - akceptuj tylko pliki audio
+// Filtr plików - bardziej restrykcyjny
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('audio/')) {
+  // Dozwolone MIME types
+  const allowedMimeTypes = [
+    'audio/mpeg',
+    'audio/mp3', 
+    'audio/wav',
+    'audio/x-wav',
+    'audio/ogg',
+    'audio/mp4',
+    'audio/aac'
+  ];
+  
+  // Dozwolone rozszerzenia plików
+  const allowedExtensions = ['.mp3', '.wav', '.ogg', '.mp4', '.aac'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedMimeTypes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error("Tylko pliki audio są dozwolone!"), false);
+    cb(new Error(`Nieprawidłowy typ pliku. Dozwolone formaty: ${allowedExtensions.join(', ')}`), false);
   }
 };
 
@@ -37,10 +52,10 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: { 
-    fileSize: 100 * 1024 * 1024, // Zwiększ limit do 100MB
-    fieldSize: 50 * 1024 * 1024,  // Limit dla pól formularza
+    fileSize: 10 * 1024 * 1024, // Zmniejszone z 100MB do 10MB
+    fieldSize: 2 * 1024 * 1024,  // Zmniejszone z 50MB do 2MB
     files: 1, // Maksymalnie 1 plik
-    parts: 10 // Maksymalnie 10 części formularza
+    parts: 5 // Zmniejszone z 10 do 5 części formularza
   }
 });
 

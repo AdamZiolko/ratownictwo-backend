@@ -7,10 +7,27 @@ const swaggerSpecs = require("./app/config/swagger");
 const http = require("http");
 const os = require("os");
 
+// Import zabezpieczeń
+const { securityHeaders, apiLimiter, speedLimiter, corsOptions } = require("./app/middleware/security");
+const { sanitizeInput } = require("./app/middleware/validation");
+const { globalErrorHandler, notFoundHandler } = require("./app/middleware/errorHandler");
+const requestLogger = require("./app/middleware/requestLogger");
+const securityLogger = require("./app/middleware/securityLogger");
+
 const app = express();
 const server = http.createServer(app);
 
-// Zwiększenie timeout serwera do 10 minut
+// BEZPIECZEŃSTWO: Spowolnienie żądań
+app.use(speedLimiter);
+
+// BEZPIECZEŃSTWO: Rate limiting
+app.use('/api/', apiLimiter);
+
+// BEZPIECZEŃSTWO: Poprawiona konfiguracja CORS
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+// Zwiększenie timeout serwera (zachowane dla kompatybilności)
 server.timeout = 10 * 60 * 1000; // 10 minut
 server.keepAliveTimeout = 10 * 60 * 1000; // 10 minut
 server.headersTimeout = 10 * 60 * 1000; // 10 minut
@@ -20,14 +37,6 @@ server.on('connection', (socket) => {
   socket.setKeepAlive(true, 60000); // Keep-alive co 60 sekund
   socket.setTimeout(10 * 60 * 1000); // 10 minut timeout
 });
-
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-  })
-);
-app.options("*", cors({ origin: true, credentials: true }));
 
 // Middleware dla zwiększenia timeout dla wszystkich żądań
 app.use((req, res, next) => {
@@ -42,13 +51,101 @@ app.use((req, res, next) => {
   next();
 });
 
-// Zwiększenie limitów dla dużych plików
-app.use(express.json({ limit: '50mb' }));
+// BEZPIECZEŃSTWO: HTTPS Enforcement (kontrolowane przez zmienną środowiskową)
+const enforceHttps = process.env.ENFORCE_HTTPS === 'true';
+if (process.env.NODE_ENV === 'production' && enforceHttps) {
+  app.use((req, res, next) => {
+    // Sprawdź czy żądanie przychodzi przez HTTPS
+    if (req.header('x-forwarded-proto') !== 'https' && req.header('x-forwarded-ssl') !== 'on') {
+      return res.redirect(301, `https://${req.header('host')}${req.url}`);
+    }
+    next();
+  });
+}
+
+// BEZPIECZEŃSTWO: Sanityzacja danych wejściowych
+app.use(sanitizeInput);
+
+// Zmniejszenie limitów dla bezpieczeństwa (było 50MB) z lepszą obsługą błędów JSON
+app.use(express.json({ 
+  limit: '25mb',
+  verify: (req, res, buf, encoding) => {
+    try {
+      // Store raw body for debugging purposes
+      req.rawBody = buf.toString(encoding || 'utf8');
+    } catch (err) {
+      // If there's an encoding error, log it
+      console.error('Error storing raw body:', err);
+    }
+  }
+}));
+
+// Custom error handler for JSON parsing errors
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('JSON Parse Error - Attempting to fix and retry:', {
+      url: req.originalUrl,
+      method: req.method,
+      rawBody: req.rawBody?.substring(0, 200),
+      error: err.message
+    });
+    
+    // Try to fix common JSON issues
+    if (req.rawBody) {
+      let fixedBody = req.rawBody;
+      let wasFixed = false;
+      
+      // Fix escaped quotes
+      if (fixedBody.includes('\\"')) {
+        fixedBody = fixedBody.replace(/\\"/g, '"');
+        wasFixed = true;
+      }
+      
+      // Fix double-encoded JSON
+      if (fixedBody.startsWith('"') && fixedBody.endsWith('"')) {
+        try {
+          const unescaped = JSON.parse(fixedBody);
+          if (typeof unescaped === 'string') {
+            fixedBody = unescaped;
+            wasFixed = true;
+          }
+        } catch (e) {
+          fixedBody = fixedBody.slice(1, -1);
+          wasFixed = true;
+        }
+      }
+      
+      if (wasFixed) {
+        try {
+          req.body = JSON.parse(fixedBody);
+          console.log('✅ Successfully fixed and parsed JSON');
+          return next();
+        } catch (parseError) {
+          console.error('❌ Could not fix malformed JSON:', parseError.message);
+        }
+      }
+    }
+    
+    // If we can't fix it, return a clear error
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid JSON format in request body',
+      error: 'Please check that your JSON is properly formatted',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  next(err);
+});
+
 app.use(express.urlencoded({ 
   extended: true, 
-  limit: '50mb',
-  parameterLimit: 50000
+  limit: '25mb',
+  parameterLimit: 10000
 }));
+
+// Add request logging for debugging JSON parsing issues
+app.use(requestLogger);
 
 const db = require("./app/models");
 const Role = db.role;
@@ -60,6 +157,21 @@ db.sequelize
     console.log("✅ Baza zsynchronizowana (sequelize.sync).");
     await checkRoles();
     await seedDefaultPreset();
+    
+    // Log security system initialization
+    securityLogger.logger.info('Security systems initialized', {
+      event: 'SYSTEM_START',
+      message: 'Security systems initialized',
+      details: {
+        nodeEnv: process.env.NODE_ENV,
+        jwtAlgorithm: process.env.JWT_ALGORITHM || 'HMAC',
+        accountLockoutEnabled: true,
+        passwordValidationEnabled: true,
+        secureFileUploadEnabled: true,
+        httpsEnforced: process.env.ENFORCE_HTTPS === 'true'
+      },
+      timestamp: new Date().toISOString()
+    });
   })
   .catch((err) => {
     console.error("❌ Błąd podczas synchronizacji bazy:", err);
@@ -80,6 +192,16 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Test endpoint for JSON parsing
+app.post("/api/test-json", (req, res) => {
+  res.json({
+    success: true,
+    message: "JSON parsed successfully",
+    receivedData: req.body,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs, { explorer: true }));
 
 require("./app/routes/auth.routes")(app);
@@ -92,6 +214,10 @@ require("./app/routes/testResult.routes")(app);
 require("./app/routes/colorConfig.routes")(app);
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);
+
+// BEZPIECZEŃSTWO: Middleware obsługi błędów (na końcu, po wszystkich route'ach)
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 async function checkRoles() {
   try {

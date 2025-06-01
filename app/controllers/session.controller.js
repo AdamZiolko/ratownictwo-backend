@@ -4,7 +4,7 @@ const Student = db.student;
 const StudentSession = db.studentSession;
 const socketUtils = require("../utils/socket");
 
-exports.create = (req, res) => {
+exports.create = async (req, res) => {
   if (
     req.body.temperature === undefined ||
     req.body.rhythmType === undefined ||
@@ -20,32 +20,76 @@ exports.create = (req, res) => {
     return;
   }  
   
-  const session = {
-    userId: req.userId,  
-    name: req.body.name,
-    temperature: req.body.temperature,
-    rhythmType: req.body.rhythmType,
-    beatsPerMinute: req.body.beatsPerMinute,
-    noiseLevel: req.body.noiseLevel,
-    sessionCode: req.body.sessionCode,
-    isActive: req.body.isActive !== undefined ? req.body.isActive : true,
-    isEkdDisplayHidden: req.body.isEkdDisplayHidden !== undefined ? req.body.isEkdDisplayHidden : false,
-    bp: req.body.bp,
-    spo2: req.body.spo2,
-    etco2: req.body.etco2,
-    rr: req.body.rr
-  };
-  
-  Session.create(session)
-    .then(data => {
-      res.send(data);
-    })
-    .catch(err => {
-      res.status(500).send({
-        message:
-          err.message || "Some error occurred while creating the Session."
-      });
+  try {
+    // Check for duplicate session code
+    const existingSessionByCode = await Session.findOne({
+      where: {
+        sessionCode: req.body.sessionCode,
+        userId: req.userId
+      }
     });
+
+    if (existingSessionByCode) {
+      return res.status(400).send({
+        message: "Sesja o tym kodzie już istnieje. Wybierz inny kod sesji.",
+        field: "sessionCode"
+      });
+    }
+
+    // Check for duplicate session name
+    const existingSessionByName = await Session.findOne({
+      where: {
+        name: req.body.name,
+        userId: req.userId
+      }
+    });
+
+    if (existingSessionByName) {
+      return res.status(400).send({
+        message: "Sesja o tej nazwie już istnieje. Wybierz inną nazwę sesji.",
+        field: "name"
+      });
+    }
+
+    const session = {
+      userId: req.userId,  
+      name: req.body.name,
+      temperature: req.body.temperature,
+      rhythmType: req.body.rhythmType,
+      beatsPerMinute: req.body.beatsPerMinute,
+      noiseLevel: req.body.noiseLevel,
+      sessionCode: req.body.sessionCode,
+      isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+      isEkdDisplayHidden: req.body.isEkdDisplayHidden !== undefined ? req.body.isEkdDisplayHidden : false,
+      bp: req.body.bp,
+      spo2: req.body.spo2,
+      etco2: req.body.etco2,
+      rr: req.body.rr
+    };
+      const data = await Session.create(session);
+    res.send(data);
+  } catch (err) {
+    // Handle Sequelize unique constraint errors
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      const field = err.errors[0]?.path;
+      if (field === 'sessionCode' || err.errors[0]?.message.includes('sessionCode')) {
+        return res.status(400).send({
+          message: "Sesja o tym kodzie już istnieje. Wybierz inny kod sesji.",
+          field: "sessionCode"
+        });
+      } else if (field === 'name' || err.errors[0]?.message.includes('name')) {
+        return res.status(400).send({
+          message: "Sesja o tej nazwie już istnieje. Wybierz inną nazwę sesji.",
+          field: "name"
+        });
+      }
+    }
+    
+    res.status(500).send({
+      message:
+        err.message || "Some error occurred while creating the Session."
+    });
+  }
 };
 
 exports.findAll = async (req, res) => {
@@ -211,39 +255,104 @@ exports.findOne = async (req, res) => {
   }
 };
 
-exports.update = (req, res) => {
+exports.update = async (req, res) => {
   const sessionId = req.params.id; 
   
-  Session.update(req.body, {
-    where: { 
-      sessionId: sessionId,
-      userId: req.userId  
-    }
-  })
-    .then(num => {
-      if (num == 1) {
-        Session.findByPk(sessionId).then(updatedSession => {
-          if (req.body.isActive === false) {
-            socketUtils.emitSessionDeleted(updatedSession.sessionCode);
-          } else {
-            socketUtils.emitSessionUpdate('session-updated', updatedSession, `code-${updatedSession.sessionCode}`);
-          }
-        });
+  try {
+    // Find the current session to check ownership
+    const currentSession = await Session.findOne({
+      where: { 
+        sessionId: sessionId,
+        userId: req.userId  
+      }
+    });
 
-        res.send({
-          message: "Session was updated successfully."
-        });
-      } else {
-        res.send({
-          message: `Cannot update Session with id=${sessionId}. Maybe Session was not found or req.body is empty!`
+    if (!currentSession) {
+      return res.status(404).send({
+        message: `Cannot find Session with id=${sessionId} or you don't have permission.`
+      });
+    }
+
+    // Check for duplicate session code (if sessionCode is being updated)
+    if (req.body.sessionCode && req.body.sessionCode !== currentSession.sessionCode) {
+      const existingSessionByCode = await Session.findOne({
+        where: {
+          sessionCode: req.body.sessionCode,
+          userId: req.userId,
+          sessionId: { [db.Sequelize.Op.ne]: sessionId } // Exclude current session
+        }
+      });
+
+      if (existingSessionByCode) {
+        return res.status(400).send({
+          message: "Sesja o tym kodzie już istnieje. Wybierz inny kod sesji.",
+          field: "sessionCode"
         });
       }
-    })
-    .catch(err => {
-      res.status(500).send({
-        message: "Error updating Session with id=" + sessionId
+    }
+
+    // Check for duplicate session name (if name is being updated)
+    if (req.body.name && req.body.name !== currentSession.name) {
+      const existingSessionByName = await Session.findOne({
+        where: {
+          name: req.body.name,
+          userId: req.userId,
+          sessionId: { [db.Sequelize.Op.ne]: sessionId } // Exclude current session
+        }
       });
+
+      if (existingSessionByName) {
+        return res.status(400).send({
+          message: "Sesja o tej nazwie już istnieje. Wybierz inną nazwę sesji.",
+          field: "name"
+        });
+      }
+    }
+
+    // Proceed with update
+    const [num] = await Session.update(req.body, {
+      where: { 
+        sessionId: sessionId,
+        userId: req.userId  
+      }
     });
+
+    if (num == 1) {
+      const updatedSession = await Session.findByPk(sessionId);
+      if (req.body.isActive === false) {
+        socketUtils.emitSessionDeleted(updatedSession.sessionCode);
+      } else {
+        socketUtils.emitSessionUpdate('session-updated', updatedSession, `code-${updatedSession.sessionCode}`);
+      }
+
+      res.send({
+        message: "Session was updated successfully."
+      });
+    } else {
+      res.send({
+        message: `Cannot update Session with id=${sessionId}. Maybe Session was not found or req.body is empty!`      });
+    }
+  } catch (err) {
+    // Handle Sequelize unique constraint errors
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      const field = err.errors[0]?.path;
+      if (field === 'sessionCode' || err.errors[0]?.message.includes('sessionCode')) {
+        return res.status(400).send({
+          message: "Sesja o tym kodzie już istnieje. Wybierz inny kod sesji.",
+          field: "sessionCode"
+        });
+      } else if (field === 'name' || err.errors[0]?.message.includes('name')) {
+        return res.status(400).send({
+          message: "Sesja o tej nazwie już istnieje. Wybierz inną nazwę sesji.",
+          field: "name"
+        });
+      }
+    }
+    
+    res.status(500).send({
+      message: "Error updating Session with id=" + sessionId + ": " + err.message
+    });
+  }
 };
 
 exports.delete = (req, res) => {

@@ -1,5 +1,13 @@
 const { verifySignUp } = require("../middleware");
 const controller = require("../controllers/auth.controller");
+const { loginLimiter, registrationLimiter, authLimiter } = require("../middleware/security");
+const accountLockout = require("../middleware/accountLockout");
+const passwordValidation = require("../middleware/passwordValidation");
+const { 
+  registrationValidation, 
+  loginValidation, 
+  handleValidationErrors 
+} = require("../middleware/validation");
 
 /**
  * @swagger
@@ -147,14 +155,27 @@ module.exports = function(app) {
   app.post(
     "/api/auth/signup",
     [
+      registrationLimiter,
+      ...registrationValidation,
+      handleValidationErrors,
+      passwordValidation.middleware(),
       verifySignUp.checkDuplicateUsernameOrEmail,
       verifySignUp.checkRolesExisted
     ],
     controller.signup
   );
 
-  app.post("/api/auth/signin", controller.signin);
+  app.post(
+    "/api/auth/signin", 
+    [
+      loginLimiter,
+      accountLockout.middleware(),
+      ...loginValidation,
+      handleValidationErrors
+    ],
+    controller.signin
+  );
   
   // Add refresh token endpoint
-  app.post("/api/auth/refreshtoken", controller.refreshToken);
+  app.post("/api/auth/refreshtoken", loginLimiter, controller.refreshToken);
 };

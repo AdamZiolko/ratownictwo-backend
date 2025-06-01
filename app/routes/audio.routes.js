@@ -1,5 +1,8 @@
 const { authJwt } = require("../middleware");
 const controller = require("../controllers/audio.controller");
+const { uploadLimiter } = require("../middleware/security");
+const { audioFileValidation } = require("../middleware/validation");
+const secureFileUpload = require("../middleware/secureFileUpload");
 
 /**
  * @swagger
@@ -474,10 +477,9 @@ module.exports = function(app) {
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
-   */
-  app.post(
+   */  app.post(
     "/api/audio/upload",
-    [authJwt.verifyToken],
+    [authJwt.verifyToken, uploadLimiter],
     controller.uploadAudioBase64
   );
   /**
@@ -552,10 +554,9 @@ module.exports = function(app) {
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
-   */
-  app.put(
+   */  app.put(
     "/api/audio/:id/update-form",
-    [authJwt.verifyToken, controller.uploadMiddleware],
+    [authJwt.verifyToken, uploadLimiter, secureFileUpload.processUpload, audioFileValidation],
     controller.updateAudio
   );
 
@@ -641,10 +642,9 @@ module.exports = function(app) {
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
-   */
-  app.post(
+   */  app.post(
     "/api/audio/upload-form",
-    [authJwt.verifyToken, controller.uploadMiddleware],
+    [authJwt.verifyToken, uploadLimiter, secureFileUpload.processUpload, audioFileValidation],
     controller.uploadAudio
   );
 };

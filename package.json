@@ -5,7 +5,13 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "generate-keys": "node scripts/generateKeys.js",
+    "setup-security": "node scripts/setupSecurity.js",
+    "test-security": "node scripts/testSecurity.js",
+    "security-audit": "npm audit --audit-level moderate",
+    "dev": "NODE_ENV=development node server.js",
+    "prod": "NODE_ENV=production node server.js"
   },
   "keywords": [
     "node js",
@@ -21,14 +27,22 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.5.0",
+    "express-slow-down": "^2.1.0",
+    "express-validator": "^7.2.1",
     "get-audio-duration": "^4.0.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.0",
     "multer": "^2.0.0",
+    "node-cache": "^5.1.2",
     "pg": "^8.11.1",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.32.1",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "validator": "^13.12.0",
+    "winston": "^3.11.0",
+    "xss": "^1.0.15"
   }
 }
