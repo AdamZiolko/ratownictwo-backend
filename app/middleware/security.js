@@ -107,10 +107,20 @@ const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
       ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-      : ['http://localhost:3000', 'http://localhost:8081'];
+      : [
+          'http://localhost:3000', 
+          'http://localhost:8081',
+          'http://192.168.100.6:8081',
+          'exp://192.168.100.6:8081'
+        ];
     
     // Pozwól na brak origin (mobilne aplikacje, Postman, itp.)
     if (!origin) return callback(null, true);
+    
+    // Dodaj obsługę dla Expo development server
+    if (origin.startsWith('exp://') || origin.startsWith('http://localhost') || origin.startsWith('http://192.168.')) {
+      return callback(null, true);
+    }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -120,9 +130,17 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
-  optionsSuccessStatus: 200
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'x-requested-with',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Methods'
+  ],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
 module.exports = {
