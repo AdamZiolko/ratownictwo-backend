@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require("express");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
@@ -53,7 +55,7 @@ const Role = db.role;
 const Preset = db.Preset; 
 
 db.sequelize
-  .sync({ force: true }) 
+  .sync({ force: process.env.DB_FORCE_SYNC === 'true' }) 
   .then(async () => {
     console.log("✅ Baza zsynchronizowana (sequelize.sync).");
     await checkRoles();

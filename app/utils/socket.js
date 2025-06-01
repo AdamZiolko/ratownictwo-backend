@@ -6,17 +6,22 @@ const Session = db.session;
 const User = db.user;
 const Role = db.role;
 
+require('dotenv').config();
+
 module.exports = {
   init: (server) => {
+    const corsOrigins = process.env.CORS_ORIGINS 
+      ? process.env.CORS_ORIGINS.split(',')
+      : [
+          "http://localhost:8081",
+          "http://192.168.100.7:8081",     
+          "exp://192.168.100.7:8081",      
+          "exp+ratownictwo://*"
+        ];
+
     io = require("socket.io")(server, {
       cors: {
-        // origin: ["http://localhost:8081", "http://localhost:3000"],
-        origin: [ 
-        "http://localhost:8081",
-        `http://192.168.100.7:8081`,     
-        `exp://192.168.100.7:8081`,      
-        "exp+ratownictwo://*"
-      ],
+        origin: corsOrigins,
         methods: ["GET", "POST", "PUT", "DELETE"],
         credentials: true,
       },
