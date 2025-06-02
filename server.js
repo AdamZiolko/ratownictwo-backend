@@ -6,6 +6,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerSpecs = require("./app/config/swagger");
 const http = require("http");
 const os = require("os");
+const bcrypt = require("bcryptjs");
 
 // Import zabezpieczeń
 const { securityHeaders, apiLimiter, speedLimiter, corsOptions } = require("./app/middleware/security");
@@ -150,6 +151,7 @@ app.use(requestLogger);
 const db = require("./app/models");
 const Role = db.role;
 const Preset = db.Preset; 
+const User = db.user;
 
 db.sequelize
   .sync({ force: process.env.DB_FORCE_SYNC === 'true' }) 
@@ -157,7 +159,8 @@ db.sequelize
     console.log("✅ Baza zsynchronizowana (sequelize.sync).");
     await checkRoles();
     await seedDefaultPreset();
-    
+    await seedDefaultAdmin();
+
     // Log security system initialization
     securityLogger.logger.info('Security systems initialized', {
       event: 'SYSTEM_START',
@@ -212,6 +215,7 @@ require("./app/routes/audio.routes")(app);
 require("./app/routes/template.routes")(app);
 require("./app/routes/testResult.routes")(app);
 require("./app/routes/colorConfig.routes")(app);
+
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);
 
@@ -266,6 +270,50 @@ async function seedDefaultPreset() {
     }
   } catch (err) {
     console.error("Błąd podczas tworzenia domyślnego presetu:", err);
+  }
+}
+
+async function seedDefaultAdmin() {
+  try {
+    const adminUsername = "admin";
+    const adminEmail = "admin@gmail.com";
+    const rawPassword = process.env.ADMIN_PASSWORD;
+
+    if (!rawPassword) {
+      console.warn(
+        "⚠️ Nie ustawiono zmiennej ADMIN_PASSWORD w .env – pomijam seed domyślnego admina."
+      );
+      return;
+    }
+
+    const existing = await User.findOne({
+      where: {
+        [db.Sequelize.Op.or]: [
+          { username: adminUsername },
+          { email: adminEmail },
+        ],
+      },
+    });
+
+    if (existing) {
+      console.log("✓ Domyślny admin już istnieje, pomijam seed.");
+      return;
+    }
+
+    const hashed = bcrypt.hashSync(rawPassword, 12);
+
+    const newAdmin = await User.create({
+      username: adminUsername,
+      email: adminEmail,
+      password: hashed,
+    });
+
+    
+    await newAdmin.setRoles([3]);
+
+    console.log("✅ Domyślny admin został utworzony (username: admin).");
+  } catch (err) {
+    console.error("❌ Błąd podczas seedowania domyślnego admina:", err);
   }
 }
 

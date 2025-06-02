@@ -114,4 +114,8 @@ module.exports = function(app) {
     [authJwt.verifyToken, authJwt.isAdmin],
     controller.adminBoard
   );
+
+  app.get("/api/users", controller.getAllUsers);
+
+  app.put("/api/users/:id/roles", controller.updateUserRoles);
 };
