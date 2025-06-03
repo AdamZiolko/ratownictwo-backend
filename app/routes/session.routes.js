@@ -51,11 +51,14 @@ const controller = require("../controllers/session.controller");
  *               isActive:
  *                 type: boolean
  *                 default: true
- *                 description: Flag indicating if session is active
- *               isEkdDisplayHidden:
+ *                 description: Flag indicating if session is active *               isEkdDisplayHidden:
  *                 type: boolean
  *                 default: false
  *                 description: Flag indicating if EKD display is hidden
+ *               showColorsConfig:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Flag indicating if colors configuration is visible to students
  *     responses:
  *       200:
  *         description: Success
@@ -138,10 +141,12 @@ const controller = require("../controllers/session.controller");
  *                 type: string
  *               isActive:
  *                 type: boolean
- *                 description: Flag indicating if session is active
- *               isEkdDisplayHidden:
+ *                 description: Flag indicating if session is active *               isEkdDisplayHidden:
  *                 type: boolean
  *                 description: Flag indicating if EKD display is hidden
+ *               showColorsConfig:
+ *                 type: boolean
+ *                 description: Flag indicating if colors configuration is visible to students
  *     responses:
  *       200:
  *         description: Success
@@ -203,10 +208,12 @@ const controller = require("../controllers/session.controller");
  *                 name:
  *                   type: string
  *                 isActive:
- *                   type: boolean
- *                 isEkdDisplayHidden:
+ *                   type: boolean *                 isEkdDisplayHidden:
  *                   type: boolean
  *                   description: Flag indicating if EKD display is hidden
+ *                 showColorsConfig:
+ *                   type: boolean
+ *                   description: Flag indicating if colors configuration is visible to students
  *                 sessionCode:
  *                   type: string
  *       401:

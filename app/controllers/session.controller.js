@@ -49,9 +49,7 @@ exports.create = async (req, res) => {
         message: "Sesja o tej nazwie już istnieje. Wybierz inną nazwę sesji.",
         field: "name"
       });
-    }
-
-    const session = {
+    }    const session = {
       userId: req.userId,  
       name: req.body.name,
       temperature: req.body.temperature,
@@ -61,6 +59,7 @@ exports.create = async (req, res) => {
       sessionCode: req.body.sessionCode,
       isActive: req.body.isActive !== undefined ? req.body.isActive : true,
       isEkdDisplayHidden: req.body.isEkdDisplayHidden !== undefined ? req.body.isEkdDisplayHidden : false,
+      showColorsConfig: req.body.showColorsConfig !== undefined ? req.body.showColorsConfig : true,
       bp: req.body.bp,
       spo2: req.body.spo2,
       etco2: req.body.etco2,
@@ -458,8 +457,7 @@ exports.findByCode = async (req, res) => {
         message: `No sessions found with code=${code}.`
       });
     }
-    
-    const objectToReturn = {
+      const objectToReturn = {
       sessionId: data.sessionId,
       name: data.name,
       temperature: data.temperature,
@@ -469,6 +467,7 @@ exports.findByCode = async (req, res) => {
       sessionCode: data.sessionCode,
       isActive: data.isActive,
       isEkdDisplayHidden: data.isEkdDisplayHidden,
+      showColorsConfig: data.showColorsConfig,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       bp: data.bp,
