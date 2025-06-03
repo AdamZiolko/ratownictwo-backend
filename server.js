@@ -298,19 +298,24 @@ async function seedDefaultAdmin() {
     });
 
     if (existing) {
-      console.log("✓ Domyślny admin już istnieje, pomijam seed.");
+      const passwordsMatch = bcrypt.compareSync(rawPassword, existing.password);
+      if (passwordsMatch) {
+        console.log("✓ Admin już istnieje i hasło się zgadza – pomijam aktualizację.");
+        return;
+      }
+
+      const newHash = bcrypt.hashSync(rawPassword, 12);
+      await existing.update({ password: newHash });
+      console.log("🔄 Hasło admina zostało zaktualizowane zgodnie z .env.");
       return;
     }
 
     const hashed = bcrypt.hashSync(rawPassword, 12);
-
     const newAdmin = await User.create({
       username: adminUsername,
       email: adminEmail,
       password: hashed,
     });
-
-    
     await newAdmin.setRoles([3]);
 
     console.log("✅ Domyślny admin został utworzony (username: admin).");
