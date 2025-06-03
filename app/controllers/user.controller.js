@@ -97,3 +97,18 @@ exports.adminBoard = (req, res) => {
 exports.moderatorBoard = (req, res) => {
   res.status(200).send("Moderator Content.");
 };
+
+exports.deleteUser = async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Użytkownik nie istnieje." });
+    }
+    await user.destroy();
+    return res.status(200).json({ message: "Użytkownik usunięty." });
+  } catch (err) {
+    console.error("Błąd deleteUser:", err);
+    return res.status(500).json({ message: "Wewnętrzny błąd serwera." });
+  }
+};

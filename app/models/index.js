@@ -102,6 +102,7 @@ db.testResult.belongsTo(db.user, {
 
 db.testResult.belongsTo(db.session, {
   foreignKey: 'sessionId',
+  onDelete: 'SET NULL',
   as: 'session'
 });
 
@@ -109,6 +110,7 @@ db.ROLES = ["user", "admin", "moderator"];
 
 db.testResult.belongsTo(db.session, {
   foreignKey: 'sessionId',
+  onDelete: 'SET NULL',
   as: 'testSession' 
 });
 

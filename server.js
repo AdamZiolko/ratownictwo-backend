@@ -215,7 +215,6 @@ require("./app/routes/audio.routes")(app);
 require("./app/routes/template.routes")(app);
 require("./app/routes/testResult.routes")(app);
 require("./app/routes/colorConfig.routes")(app);
-
 const socketUtils = require("./app/utils/socket");
 socketUtils.init(server);
 
@@ -251,10 +250,12 @@ async function seedDefaultPreset() {
       await Preset.create({
         name: "Przykładowy Preset Domyślny",
         data: {
-          rhythmType: "4/4",
-          beatsPerMinute: 120,
-          noiseLevel: "low",
-          sessionCode: "000000",
+          name: "Preset domyślny",
+          temperature: "36.6",
+          rhythmType: 0,              
+          beatsPerMinute: "72",
+          noiseLevel: "0",         
+          sessionCode: "123456",
           isActive: true,
           isEkdDisplayHidden: false,
           bp: "120/80",
@@ -272,6 +273,7 @@ async function seedDefaultPreset() {
     console.error("Błąd podczas tworzenia domyślnego presetu:", err);
   }
 }
+
 
 async function seedDefaultAdmin() {
   try {

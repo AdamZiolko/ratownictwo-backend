@@ -118,4 +118,10 @@ module.exports = function(app) {
   app.get("/api/users", controller.getAllUsers);
 
   app.put("/api/users/:id/roles", controller.updateUserRoles);
+
+  app.delete(
+    "/api/users/:id",
+    [authJwt.verifyToken],      
+    controller.deleteUser
+  );
 };
