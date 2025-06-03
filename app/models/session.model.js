@@ -27,8 +27,7 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
     sessionCode: {
       type: Sequelize.STRING,
       comment: "Session code as string"
-    },
-    isActive: {
+    },    isActive: {
       type: Sequelize.BOOLEAN,
       defaultValue: true,
       comment: "Flag indicating if session is active"
@@ -37,7 +36,12 @@ module.exports = (sequelize, Sequelize) => {  const Session = sequelize.define("
       type: Sequelize.BOOLEAN,
       defaultValue: false,
       comment: "Flag indicating if EKD display is hidden"
-    },    
+    },
+    showColorsConfig: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: true,
+      comment: "Flag indicating if colors configuration is visible to students"
+    },
     createdAt: {
       type: Sequelize.DATE,
       defaultValue: Sequelize.NOW,
