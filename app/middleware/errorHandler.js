@@ -21,13 +21,13 @@ const globalErrorHandler = (err, req, res, next) => {
 
   // Default error response
   let statusCode = err.statusCode || err.status || 500;
-  let message = 'Internal Server Error';
+  let message = 'Wewnętrzny błąd serwera';
   // Handle specific error types
   switch (err.name) {    case 'SyntaxError':
       // Handle JSON parsing errors
       if (err.message.includes('JSON') || err.type === 'entity.parse.failed') {
         statusCode = 400;
-        message = 'Invalid JSON format in request body';
+        message = 'Nieprawidłowy format JSON w treści żądania';
         
         // Log the malformed JSON for debugging
         securityLogger.logger.warn('JSON parsing error', {
@@ -58,29 +58,29 @@ const globalErrorHandler = (err, req, res, next) => {
       break;
     case 'ValidationError':
       statusCode = 400;
-      message = 'Validation Error';
+      message = 'Błąd walidacji';
       break;
     case 'UnauthorizedError':
     case 'JsonWebTokenError':
     case 'TokenExpiredError':
       statusCode = 401;
-      message = 'Unauthorized';
+      message = 'Brak autoryzacji';
       break;
     case 'ForbiddenError':
       statusCode = 403;
-      message = 'Forbidden';
+      message = 'Dostęp zabroniony';
       break;
     case 'NotFoundError':
       statusCode = 404;
-      message = 'Not Found';
+      message = 'Nie znaleziono';
       break;
     case 'ConflictError':
       statusCode = 409;
-      message = 'Conflict';
+      message = 'Konflikt';
       break;
     case 'TooManyRequestsError':
       statusCode = 429;
-      message = 'Too Many Requests';
+      message = 'Zbyt wiele żądań';
       break;
     case 'MulterError':
       statusCode = handleMulterError(err);
@@ -172,19 +172,19 @@ function handleMulterError(err) {
 function getMulterErrorMessage(err) {
   switch (err.code) {
     case 'LIMIT_FILE_SIZE':
-      return 'File too large';
+      return 'Plik jest zbyt duży';
     case 'LIMIT_FILE_COUNT':
-      return 'Too many files';
+      return 'Zbyt wiele plików';
     case 'LIMIT_UNEXPECTED_FILE':
-      return 'Unexpected file field';
+      return 'Nieoczekiwane pole pliku';
     case 'LIMIT_FIELD_KEY':
-      return 'Field name too long';
+      return 'Nazwa pola jest zbyt długa';
     case 'LIMIT_FIELD_VALUE':
-      return 'Field value too long';
+      return 'Wartość pola jest zbyt długa';
     case 'LIMIT_FIELD_COUNT':
-      return 'Too many fields';
+      return 'Zbyt wiele pól';
     default:
-      return 'File upload error';
+      return 'Błąd przesyłania pliku';
   }
 }
 
@@ -200,7 +200,7 @@ const notFoundHandler = (req, res, next) => {
 
   res.status(404).json({
     success: false,
-    message: 'Route not found',
+    message: 'Nie znaleziono ścieżki',
     timestamp: new Date().toISOString(),
     path: req.originalUrl,
     method: req.method

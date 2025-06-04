@@ -25,7 +25,7 @@ class JWTManager {  constructor() {
       this.refreshSecret = require('./secrets').getSecret('JWT_REFRESH_SECRET');
       
       if (!this.secret || !this.refreshSecret) {
-        throw new Error('JWT secrets not available');
+        throw new Error('Sekrety JWT nie są dostępne');
       }
       
       console.log('✅ JWT secrets loaded successfully', {
@@ -89,7 +89,7 @@ class JWTManager {  constructor() {
         return jwt.verify(token, this.secret, options);
       }
     } catch (error) {
-      throw new Error('Token verification failed: ' + error.message);
+      throw new Error('Weryfikacja tokenu nie powiodła się: ' + error.message);
     }
   }
 

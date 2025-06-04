@@ -434,17 +434,17 @@ module.exports = {
 
   getIO: () => {
     if (!io) {
-      throw new Error("Socket.io not initialized");
+      throw new Error("Socket.io nie zostało zainicjalizowane");
     }
     return io;
   },
   emitSessionUpdate: (event, data, room) => {
     if (!io) {
-      throw new Error("Socket.io not initialized");
+      throw new Error("Socket.io nie zostało zainicjalizowane");
     }
 
     if (!room) {
-      throw new Error("Room name is required for session updates");
+      throw new Error("Nazwa pokoju jest wymagana dla aktualizacji sesji");
     }
 
     io.to(room).emit(event, data);
@@ -457,7 +457,7 @@ module.exports = {
 
   emitExaminerUpdate: async (sessionId, eventType, studentData) => {
     if (!io) {
-      throw new Error("Socket.io not initialized");
+      throw new Error("Socket.io nie zostało zainicjalizowane");
     }
 
     try {
@@ -490,7 +490,7 @@ module.exports = {
 
   broadcastSessionUpdate: (event, data) => {
     if (!io) {
-      throw new Error("Socket.io not initialized");
+      throw new Error("Socket.io nie zostało zainicjalizowane");
     }
 
     console.log(`Broadcasting ${event} to all clients`, data);
