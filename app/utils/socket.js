@@ -173,7 +173,13 @@ module.exports = {
       // Handler dla server audio commands
       socket.on('server-audio-command', ({ code, command, audioId, loop }) => {
         console.log(`🎵 Server audio command for session ${code}:`, { command, audioId, loop });
-        io.to(`code-${code}`).emit('server-audio-command', { command, audioId, loop });
+        // Obsługa komendy stop - nie wymaga audioId, zatrzymuje aktualnie odtwarzane audio
+        if (command === 'stop') {
+          console.log(`🛑 Stopping server audio for session ${code}`);
+          io.to(`code-${code}`).emit('server-audio-command', { command: 'stop' });
+        } else {
+          io.to(`code-${code}`).emit('server-audio-command', { command, audioId, loop });
+        }
       });
 
       socket.on("examiner-unsubscribe", () => {
