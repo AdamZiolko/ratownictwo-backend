@@ -61,20 +61,6 @@ const secureFileUpload = require("../middleware/secureFileUpload");
  *           type: string
  *           default: audio/mp3
  *           description: MIME type of the audio file
- *     AudioUpdateBase64:
- *       type: object
- *       properties:
- *         name:
- *           type: string
- *           description: New name for the audio file
- *         audioData:
- *           type: string
- *           format: byte
- *           description: Base64 encoded audio data for replacement
- *         mimeType:
- *           type: string
- *           default: audio/mp3
- *           description: MIME type of the audio file
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -337,77 +323,6 @@ module.exports = function(app) {
     controller.deleteAudio
   );
 
-  /**
-   * @swagger
-   * /api/audio/{id}/update:
-   *   put:
-   *     summary: Update audio file (Base64)
-   *     description: Update an audio file using Base64 encoded data. Only the owner can update their own files.
-   *     tags: [Audio]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: The audio file ID to update
-   *     requestBody:
-   *       required: false
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/AudioUpdateBase64'
-   *           examples:
-   *             updateNameOnly:
-   *               summary: Update name only
-   *               value:
-   *                 name: "New Audio Name"
-   *             updateAudioData:
-   *               summary: Update audio data and name
-   *               value:
-   *                 name: "Updated Audio"
-   *                 audioData: "UklGRi4EAABXQVZFZm10IBAAAAABAAEA..."
-   *                 mimeType: "audio/wav"
-   *     responses:
-   *       200:
-   *         description: Audio file updated successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/SuccessResponse'
-   *       401:
-   *         description: Unauthorized - Invalid or missing token
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       403:
-   *         description: Forbidden - User doesn't own this audio file
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       404:
-   *         description: Audio file not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       500:
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
-  app.put(
-    "/api/audio/:id/update",
-    [authJwt.verifyToken],
-    controller.updateAudioBase64
-  );
 
   /**
    * @swagger
@@ -481,83 +396,6 @@ module.exports = function(app) {
     "/api/audio/upload",
     [authJwt.verifyToken, uploadLimiter],
     controller.uploadAudioBase64
-  );
-  /**
-   * @swagger
-   * /api/audio/{id}/update-form:
-   *   put:
-   *     summary: Update audio file (FormData - Legacy)
-   *     description: Update an audio file using multipart form data. Only the owner can update their own files. This is a legacy endpoint.
-   *     tags: [Audio]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: The audio file ID to update
-   *     requestBody:
-   *       required: false
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               name:
-   *                 type: string
-   *                 description: New name for the audio file
-   *               audio:
-   *                 type: string
-   *                 format: binary
-   *                 description: Audio file to upload (optional)
-   *           examples:
-   *             updateWithFile:
-   *               summary: Update with new audio file
-   *               value:
-   *                 name: "Updated Audio Name"
-   *                 audio: "(binary audio file)"
-   *             updateNameOnly:
-   *               summary: Update name only
-   *               value:
-   *                 name: "New Audio Name"
-   *     responses:
-   *       200:
-   *         description: Audio file updated successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/SuccessResponse'
-   *       401:
-   *         description: Unauthorized - Invalid or missing token
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       403:
-   *         description: Forbidden - User doesn't own this audio file
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       404:
-   *         description: Audio file not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       500:
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */  app.put(
-    "/api/audio/:id/update-form",
-    [authJwt.verifyToken, uploadLimiter, secureFileUpload.processUpload, audioFileValidation],
-    controller.updateAudio
   );
 
   /**

@@ -228,7 +228,7 @@ exports.refreshToken = async (req, res) => {
 
   if (!requestToken) {
     securityLogger.logSecurityViolation(req, 'MISSING_REFRESH_TOKEN');
-    return res.status(403).json({ message: "Token odświeżania jest wymagany!" });
+    return res.status(403).json({ message: "Refresh Token is required!" });
   }
 
   try {
@@ -241,7 +241,7 @@ exports.refreshToken = async (req, res) => {
       securityLogger.logSecurityViolation(req, 'INVALID_REFRESH_TOKEN', {
         token: requestToken.substring(0, 20) + '...'
       });
-      return res.status(403).json({ message: "Nie znaleziono tokenu odświeżania!" });
+      return res.status(403).json({ message: "Refresh token not found!" });
     }
 
     if (refreshToken.expiryDate.getTime() < new Date().getTime()) {
@@ -250,7 +250,7 @@ exports.refreshToken = async (req, res) => {
         reason: 'TOKEN_EXPIRED'
       });
       return res.status(403).json({
-        message: "Token odświeżania wygasł. Zaloguj się ponownie!",
+        message: "Refresh token was expired. Please sign in again!",
       });
     }
 
@@ -260,7 +260,7 @@ exports.refreshToken = async (req, res) => {
       securityLogger.logSecurityViolation(req, 'REFRESH_TOKEN_USER_NOT_FOUND', {
         userId: decoded.userId
       });
-      return res.status(403).json({ message: "Nie znaleziono użytkownika!" });
+      return res.status(403).json({ message: "User not found!" });
     }
 
     // Wygeneruj nowy access token
@@ -284,7 +284,7 @@ exports.refreshToken = async (req, res) => {
     securityLogger.logSecurityViolation(req, 'REFRESH_TOKEN_VERIFICATION_FAILED', {
       error: err.message
     });
-    return res.status(403).json({ message: "Nieprawidłowy token odświeżania!" });
+    return res.status(403).json({ message: "Invalid refresh token!" });
   }
 };
 
