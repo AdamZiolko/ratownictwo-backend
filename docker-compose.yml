@@ -4,25 +4,70 @@ services:
   postgres:
     image: postgres:15
     container_name: ratownictwo_postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ratownictwo_user
-      POSTGRES_PASSWORD: gZiMiGf2buBbpIBJzWdogiJVACXzNobcDCwwmxxSgVI
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always
 
   pgadmin:
     image: dpage/pgadmin4
     container_name: ratownictwo_pgadmin
+    env_file:
+      - .env
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      NODE_ENV: production
+      PORT: ${PORT}
+      DB_HOST: postgres                  
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
     ports:
       - "${PGADMIN_PORT}:80"
     depends_on:
       - postgres
+    restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ratownictwo_api
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT}
+
+   
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      
+      DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}"
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      - postgres
+    restart: always
 
 volumes:
   postgres_data:
